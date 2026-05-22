@@ -63,7 +63,7 @@ export function Dashboard({ data }: DashboardProps) {
 
   return (
     <div>
-      <section className="flex flex-col justify-between gap-5 border-b border-[var(--border)] pb-6 md:flex-row md:items-end">
+      <section className="border-b border-[var(--border)] pb-6">
         <div className="min-w-0">
           <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--coral-strong)]">
             Visual Square ERP
@@ -75,10 +75,6 @@ export function Dashboard({ data }: DashboardProps) {
             고객, 프로젝트, 인보이스, 발주·빌, 결과물을 한 프로젝트에
             묶어서 디자인 에이전시와 인쇄 중개 업무의 마진을 추적합니다.
           </p>
-        </div>
-        <div className="ui-card shrink-0 px-4 py-3 text-sm">
-          <p className="font-semibold">Supabase</p>
-          <p className="mt-1 text-[var(--muted)]">실제 DB 연결됨</p>
         </div>
       </section>
 

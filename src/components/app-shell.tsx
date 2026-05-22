@@ -68,7 +68,7 @@ export function AppShell({ children, userEmail, activePath }: AppShellProps) {
 
         <div className="border-t border-[var(--border)] p-4 text-xs leading-5 text-[var(--muted)]">
           <p className="font-semibold text-[var(--foreground)]">Internal ERP</p>
-          <p>Supabase 연결 · 실제 데이터</p>
+          <p>Project-centered operations</p>
         </div>
       </aside>
 
