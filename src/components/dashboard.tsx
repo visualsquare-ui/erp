@@ -9,12 +9,14 @@ import {
   tasks,
   vendorBills,
 } from "@/lib/sample-data";
+import { hasSupabaseConfig } from "@/lib/supabase";
 
 import { MetricCard } from "./metric-card";
 import { ProjectTable } from "./project-table";
 import { StatusBadge } from "./status-badge";
 
 export function Dashboard() {
+  const supabaseConfigured = hasSupabaseConfig();
   const activeProjects = projects.filter(
     (project) => project.status === "in_progress" || project.status === "quote",
   );
@@ -51,7 +53,9 @@ export function Dashboard() {
         <div className="border border-[var(--border)] bg-[var(--surface)] px-4 py-3 text-sm">
           <p className="font-semibold">Supabase</p>
           <p className="mt-1 text-[var(--muted)]">
-            env 연결 전: 샘플 데이터 표시
+            {supabaseConfigured
+              ? "env 연결됨: Phase 1 SQL 실행 대기"
+              : "env 연결 전: 샘플 데이터 표시"}
           </p>
         </div>
       </section>
