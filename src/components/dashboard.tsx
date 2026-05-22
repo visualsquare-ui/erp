@@ -1,0 +1,189 @@
+import { AlertCircle, ArrowUpRight, Clock3 } from "lucide-react";
+
+import { formatCurrency, formatUsDate } from "@/lib/format";
+import {
+  assets,
+  clients,
+  invoices,
+  projects,
+  tasks,
+  vendorBills,
+} from "@/lib/sample-data";
+
+import { MetricCard } from "./metric-card";
+import { ProjectTable } from "./project-table";
+import { StatusBadge } from "./status-badge";
+
+export function Dashboard() {
+  const activeProjects = projects.filter(
+    (project) => project.status === "in_progress" || project.status === "quote",
+  );
+  const sentInvoices = invoices.filter((invoice) => invoice.status !== "paid");
+  const openBills = vendorBills.filter((bill) => bill.status !== "paid");
+  const outstandingAr = sentInvoices.reduce(
+    (sum, invoice) => sum + invoice.total - invoice.paidAmount,
+    0,
+  );
+  const outstandingAp = openBills.reduce((sum, bill) => sum + bill.amount, 0);
+  const monthlyRevenue = invoices
+    .filter((invoice) => invoice.issueDate.startsWith("2026-05"))
+    .reduce((sum, invoice) => sum + invoice.total, 0);
+  const urgentTasks = tasks
+    .filter((task) => task.status !== "done")
+    .sort((a, b) => a.dueDate.localeCompare(b.dueDate))
+    .slice(0, 3);
+
+  return (
+    <div className="mx-auto max-w-7xl">
+      <section className="flex flex-col justify-between gap-5 border-b border-[var(--border)] pb-6 md:flex-row md:items-end">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--coral-strong)]">
+            Visual Square ERP
+          </p>
+          <h1 className="mt-2 max-w-4xl break-keep text-2xl font-semibold tracking-normal text-[var(--foreground)] sm:text-3xl md:text-4xl">
+            프로젝트 중심 운영 대시보드
+          </h1>
+          <p className="mt-3 max-w-3xl text-sm leading-6 text-[var(--muted)]">
+            고객, 프로젝트, 인보이스, 발주·빌, 결과물을 한 프로젝트에
+            묶어서 디자인 에이전시와 인쇄 중개 업무의 마진을 추적합니다.
+          </p>
+        </div>
+        <div className="border border-[var(--border)] bg-[var(--surface)] px-4 py-3 text-sm">
+          <p className="font-semibold">Supabase</p>
+          <p className="mt-1 text-[var(--muted)]">
+            env 연결 전: 샘플 데이터 표시
+          </p>
+        </div>
+      </section>
+
+      <section className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+        <MetricCard
+          label="진행 프로젝트"
+          value={`${activeProjects.length}`}
+          detail={`${clients.length}개 고객 기준`}
+          tone="coral"
+        />
+        <MetricCard
+          label="이번 달 매출"
+          value={formatCurrency(monthlyRevenue)}
+          detail="2026년 5월 발행 인보이스"
+          tone="green"
+        />
+        <MetricCard
+          label="미수금"
+          value={formatCurrency(outstandingAr)}
+          detail={`${sentInvoices.length}건 추적 중`}
+          tone="blue"
+        />
+        <MetricCard
+          label="미지급금"
+          value={formatCurrency(outstandingAp)}
+          detail={`${openBills.length}건 AP`}
+        />
+        <MetricCard
+          label="포트폴리오"
+          value={`${assets.filter((asset) => asset.isPortfolio).length}`}
+          detail="쇼케이스 노출 자산"
+        />
+      </section>
+
+      <section className="mt-8 grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
+        <div>
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <div>
+              <h2 className="text-lg font-semibold">프로젝트 허브</h2>
+              <p className="mt-1 text-sm text-[var(--muted)]">
+                유형별로 발주·빌 워크플로우 노출이 달라집니다.
+              </p>
+            </div>
+            <button
+              type="button"
+              className="inline-flex h-9 items-center border border-[var(--coral)] bg-[var(--coral)] px-3 text-sm font-semibold text-white transition hover:bg-[var(--coral-strong)]"
+            >
+              <ArrowUpRight className="mr-2 h-4 w-4" aria-hidden="true" />
+              새 프로젝트
+            </button>
+          </div>
+          <ProjectTable />
+        </div>
+
+        <aside className="space-y-6">
+          <section>
+            <div className="mb-3 flex items-center gap-2">
+              <Clock3 className="h-4 w-4 text-[var(--coral)]" />
+              <h2 className="text-lg font-semibold">마감 임박</h2>
+            </div>
+            <div className="border border-[var(--border)] bg-white">
+              {urgentTasks.map((task) => {
+                const project = projects.find(
+                  (item) => item.id === task.projectId,
+                );
+
+                return (
+                  <div
+                    key={task.id}
+                    className="border-b border-[var(--border)] px-4 py-4 last:border-b-0"
+                  >
+                    <p className="text-sm font-semibold">{task.title}</p>
+                    <p className="mt-1 text-xs text-[var(--muted)]">
+                      {project?.name}
+                    </p>
+                    <div className="mt-3 flex items-center justify-between">
+                      <span className="text-xs text-[var(--muted)]">
+                        {task.assignee}
+                      </span>
+                      <span className="text-xs font-semibold">
+                        {formatUsDate(task.dueDate)}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+
+          <section>
+            <div className="mb-3 flex items-center gap-2">
+              <AlertCircle className="h-4 w-4 text-[var(--coral)]" />
+              <h2 className="text-lg font-semibold">인보이스 상태</h2>
+            </div>
+            <div className="border border-[var(--border)] bg-white">
+              {invoices.map((invoice) => {
+                const client = clients.find(
+                  (item) => item.id === invoice.clientId,
+                );
+
+                return (
+                  <div
+                    key={invoice.id}
+                    className="border-b border-[var(--border)] px-4 py-4 last:border-b-0"
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <p className="text-sm font-semibold">
+                          {invoice.invoiceNumber}
+                        </p>
+                        <p className="mt-1 text-xs text-[var(--muted)]">
+                          {client?.companyName}
+                        </p>
+                      </div>
+                      <StatusBadge status={invoice.status} />
+                    </div>
+                    <div className="mt-3 flex items-center justify-between text-sm">
+                      <span className="text-[var(--muted)]">
+                        Due {formatUsDate(invoice.dueDate)}
+                      </span>
+                      <span className="font-semibold">
+                        {formatCurrency(invoice.total - invoice.paidAmount)}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        </aside>
+      </section>
+    </div>
+  );
+}

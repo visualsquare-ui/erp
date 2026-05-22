@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 420" role="img" aria-labelledby="title">
+  <title id="title">Brand guide portfolio thumbnail</title>
+  <rect width="640" height="420" fill="#FFFFFF"/>
+  <rect x="66" y="52" width="222" height="316" fill="#FBF6F3" stroke="#E7E2DD" stroke-width="3"/>
+  <rect x="352" y="52" width="222" height="316" fill="#141414"/>
+  <rect x="98" y="92" width="118" height="18" fill="#141414"/>
+  <rect x="98" y="132" width="154" height="10" fill="#E7E2DD"/>
+  <rect x="98" y="154" width="128" height="10" fill="#E7E2DD"/>
+  <rect x="98" y="198" width="46" height="46" fill="#F57D4B"/>
+  <rect x="158" y="198" width="46" height="46" fill="#141414"/>
+  <rect x="218" y="198" width="46" height="46" fill="#FFFFFF" stroke="#E7E2DD" stroke-width="2"/>
+  <rect x="392" y="96" width="92" height="92" fill="#F57D4B"/>
+  <rect x="392" y="220" width="142" height="16" fill="#FFFFFF"/>
+  <rect x="392" y="252" width="104" height="10" fill="#FBF6F3"/>
+  <rect x="392" y="276" width="128" height="10" fill="#FBF6F3"/>
+</svg>

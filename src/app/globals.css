@@ -1,0 +1,58 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #141414;
+  --muted: #6f6660;
+  --surface: #fbf6f3;
+  --border: #e7e2dd;
+  --coral: #f57d4b;
+  --coral-quiet: #fdede4;
+  --coral-strong: #b5491f;
+  --success: #1e7f52;
+  --warning: #9a6a06;
+  --info: #315a7c;
+  --font-ui:
+    Pretendard, Inter, ui-sans-serif, system-ui, -apple-system,
+    BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-display: Georgia, "Times New Roman", serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  min-width: 320px;
+  background: var(--background);
+  color: var(--foreground);
+}
+
+body {
+  margin: 0;
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-ui);
+  letter-spacing: 0;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+::selection {
+  background: var(--coral-quiet);
+  color: var(--coral-strong);
+}
+
+.font-display {
+  font-family: var(--font-display);
+}
