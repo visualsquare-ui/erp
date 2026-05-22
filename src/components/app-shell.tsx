@@ -9,6 +9,8 @@ import {
   UsersRound,
 } from "lucide-react";
 
+import { SignOutButton } from "@/components/sign-out-button";
+
 import logo from "../../assets/vs-logo-transparent.png";
 
 const navItems = [
@@ -23,9 +25,10 @@ const navItems = [
 
 type AppShellProps = {
   children: React.ReactNode;
+  userEmail: string;
 };
 
-export function AppShell({ children }: AppShellProps) {
+export function AppShell({ children, userEmail }: AppShellProps) {
   return (
     <div className="min-h-screen bg-[var(--background)] text-[var(--foreground)]">
       <aside className="fixed inset-y-0 left-0 hidden w-64 border-r border-[var(--border)] bg-white lg:flex lg:flex-col">
@@ -83,9 +86,12 @@ export function AppShell({ children }: AppShellProps) {
               Project-centered operations
             </p>
           </div>
-          <div className="flex items-center gap-2 text-xs text-[var(--muted)]">
-            <span className="h-2 w-2 bg-[var(--coral)]" />
-            Local preview
+          <div className="flex items-center gap-3">
+            <div className="hidden items-center gap-2 text-xs text-[var(--muted)] sm:flex">
+              <span className="h-2 w-2 bg-[var(--coral)]" />
+              {userEmail}
+            </div>
+            <SignOutButton />
           </div>
         </header>
 
