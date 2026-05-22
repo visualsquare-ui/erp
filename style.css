@@ -444,7 +444,7 @@ body.cursor-hover .cursor-follower {
     font-family: var(--font-display);
     font-size: clamp(3.4rem, 8.4vw, 7.4rem);
     font-weight: 500;
-    line-height: 0.96;
+    line-height: 1.06;
     letter-spacing: 0;
     margin-bottom: var(--space-lg);
 }
@@ -452,6 +452,8 @@ body.cursor-hover .cursor-follower {
 .title-line {
     display: block;
     overflow: hidden;
+    padding-bottom: 0.08em;
+    margin-bottom: -0.08em;
 }
 
 .title-word {
