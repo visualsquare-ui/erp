@@ -45,7 +45,7 @@
 
 **Files:**
 - Create: `src/lib/supabase.ts`
-- Create: `src/lib/sample-data.ts`
+- Create: `src/lib/sample-data.ts` (removed after Supabase data connection)
 - Create: `src/types/erp.ts`
 
 - [ ] Add a Supabase browser client factory that returns `null` when env vars are missing.

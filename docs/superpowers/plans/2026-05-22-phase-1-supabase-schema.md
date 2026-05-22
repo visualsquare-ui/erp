@@ -27,7 +27,7 @@
 - Modify: `src/components/dashboard.tsx`
 
 - [ ] Show whether Supabase public env values are configured.
-- [ ] Keep sample-data fallback explicit until authenticated CRUD pages exist.
+- [x] Remove sample-data fallback after authenticated CRUD pages exist.
 
 ### Task 3: Verification
 
