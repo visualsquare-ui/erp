@@ -5,7 +5,9 @@
   --foreground: #141414;
   --muted: #6f6660;
   --surface: #fbf6f3;
+  --surface-strong: #f5ece6;
   --border: #e7e2dd;
+  --border-strong: #d8cec6;
   --coral: #f57d4b;
   --coral-quiet: #fdede4;
   --coral-strong: #b5491f;
@@ -34,6 +36,7 @@ body {
   color: var(--foreground);
   font-family: var(--font-ui);
   letter-spacing: 0;
+  -webkit-tap-highlight-color: color-mix(in srgb, var(--coral) 18%, transparent);
 }
 
 button,
@@ -41,6 +44,14 @@ input,
 textarea,
 select {
   font: inherit;
+}
+
+button,
+a,
+input,
+textarea,
+select {
+  touch-action: manipulation;
 }
 
 a {
@@ -55,4 +66,108 @@ a {
 
 .font-display {
   font-family: var(--font-display);
+}
+
+.ui-card {
+  border: 1px solid var(--border);
+  background: #fff;
+}
+
+.ui-panel {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  padding: 1rem;
+}
+
+.ui-label {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.ui-input {
+  min-height: 2.5rem;
+  width: 100%;
+  border: 1px solid var(--border-strong);
+  background: #fff;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  color: var(--foreground);
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+}
+
+.ui-input:focus-visible {
+  border-color: var(--coral);
+  outline-color: color-mix(in srgb, var(--coral) 28%, transparent);
+}
+
+.ui-button {
+  display: inline-flex;
+  min-height: 2.5rem;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--coral);
+  background: var(--coral);
+  padding: 0.5rem 0.875rem;
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #fff;
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease;
+}
+
+.ui-button:hover {
+  border-color: var(--coral-strong);
+  background: var(--coral-strong);
+}
+
+.ui-button:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--coral) 35%, transparent);
+  outline-offset: 2px;
+}
+
+.ui-button-secondary {
+  border-color: var(--border-strong);
+  background: #fff;
+  color: var(--foreground);
+}
+
+.ui-button-secondary:hover {
+  border-color: var(--coral);
+  background: var(--coral-quiet);
+  color: var(--coral-strong);
+}
+
+.ui-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.ui-table th {
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  padding: 0.75rem 1rem;
+  text-align: left;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.ui-table td {
+  border-bottom: 1px solid var(--border);
+  padding: 0.875rem 1rem;
+  vertical-align: top;
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
 }

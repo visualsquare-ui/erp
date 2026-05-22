@@ -19,24 +19,36 @@ export default async function ClientsPage() {
         description="고객 연락처, 프로젝트 수, 매출과 미수금을 한 화면에서 확인합니다."
       />
 
-      <section className="grid gap-6 xl:grid-cols-[380px_minmax(0,1fr)]">
+      <section className="grid gap-6 xl:grid-cols-[22rem_minmax(0,1fr)]">
         <form
           action={createClientAction}
-          className="space-y-3 border border-[var(--border)] bg-[var(--surface)] p-4"
+          className="ui-panel space-y-4"
         >
-          <h2 className="font-semibold">고객 추가</h2>
-          <input className="h-10 w-full border px-3 text-sm" name="company_name" placeholder="Company name" />
-          <input className="h-10 w-full border px-3 text-sm" name="name" placeholder="Contact name" required />
-          <input className="h-10 w-full border px-3 text-sm" name="email" placeholder="Email" />
-          <input className="h-10 w-full border px-3 text-sm" name="phone" placeholder="Phone" />
-          <textarea className="min-h-20 w-full border px-3 py-2 text-sm" name="address" placeholder="Address" />
-          <textarea className="min-h-20 w-full border px-3 py-2 text-sm" name="memo" placeholder="Memo" />
-          <button className="h-10 w-full border border-[var(--coral)] bg-[var(--coral)] text-sm font-semibold text-white">
+          <h2 className="text-sm font-semibold">고객 추가</h2>
+          <Field label="Company">
+            <input className="ui-input" name="company_name" placeholder="Visual Square…" autoComplete="organization" />
+          </Field>
+          <Field label="Contact">
+            <input className="ui-input" name="name" placeholder="Jane Kim…" autoComplete="name" required />
+          </Field>
+          <Field label="Email">
+            <input className="ui-input" name="email" type="email" placeholder="jane@example.com…" autoComplete="email" spellCheck={false} />
+          </Field>
+          <Field label="Phone">
+            <input className="ui-input" name="phone" type="tel" placeholder="(201) 555-0123…" autoComplete="tel" />
+          </Field>
+          <Field label="Address">
+            <textarea className="ui-input min-h-20" name="address" placeholder="Street, City, State ZIP…" autoComplete="street-address" />
+          </Field>
+          <Field label="Memo">
+            <textarea className="ui-input min-h-20" name="memo" placeholder="Internal note…" autoComplete="off" />
+          </Field>
+          <button className="ui-button w-full">
             저장
           </button>
         </form>
 
-        <div className="border border-[var(--border)] bg-white">
+        <div className="ui-card overflow-hidden">
           {clients.length === 0 ? (
             <EmptyState title="고객 없음" description="첫 고객을 추가하세요." />
           ) : (
@@ -56,13 +68,13 @@ export default async function ClientsPage() {
               return (
                 <article
                   key={client.id}
-                  className="grid gap-4 border-b border-[var(--border)] p-4 last:border-b-0 md:grid-cols-[minmax(0,1fr)_220px]"
+                  className="grid gap-4 border-b border-[var(--border)] p-5 last:border-b-0 md:grid-cols-[minmax(0,1fr)_220px]"
                 >
-                  <div>
+                  <div className="min-w-0">
                     <h2 className="font-semibold">
                       {client.company_name ?? client.name}
                     </h2>
-                    <p className="mt-1 text-sm text-[var(--muted)]">
+                    <p className="mt-1 break-words text-sm text-[var(--muted)]">
                       {client.name} · {client.email ?? "no email"} ·{" "}
                       {client.phone ?? "no phone"}
                     </p>
@@ -73,15 +85,15 @@ export default async function ClientsPage() {
                   <div className="grid grid-cols-3 gap-2 text-sm md:grid-cols-1">
                     <div>
                       <p className="text-xs text-[var(--muted)]">Projects</p>
-                      <p className="font-semibold">{client.projects.length}</p>
+                      <p className="font-semibold tabular-nums">{client.projects.length}</p>
                     </div>
                     <div>
                       <p className="text-xs text-[var(--muted)]">Revenue</p>
-                      <p className="font-semibold">{formatCurrency(revenue)}</p>
+                      <p className="font-semibold tabular-nums">{formatCurrency(revenue)}</p>
                     </div>
                     <div>
                       <p className="text-xs text-[var(--muted)]">AR</p>
-                      <p className="font-semibold">
+                      <p className="font-semibold tabular-nums">
                         {formatCurrency(outstanding)}
                       </p>
                     </div>
@@ -93,5 +105,20 @@ export default async function ClientsPage() {
         </div>
       </section>
     </AppShell>
+  );
+}
+
+function Field({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <label className="block space-y-1.5">
+      <span className="ui-label">{label}</span>
+      {children}
+    </label>
   );
 }

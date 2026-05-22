@@ -19,6 +19,7 @@ import type {
 import { MetricCard } from "./metric-card";
 import { ProjectTable } from "./project-table";
 import { StatusBadge } from "./status-badge";
+import { EmptyState } from "./empty-state";
 
 type DashboardProps = {
   data: {
@@ -61,9 +62,9 @@ export function Dashboard({ data }: DashboardProps) {
     .slice(0, 3);
 
   return (
-    <div className="mx-auto max-w-7xl">
+    <div>
       <section className="flex flex-col justify-between gap-5 border-b border-[var(--border)] pb-6 md:flex-row md:items-end">
-        <div>
+        <div className="min-w-0">
           <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--coral-strong)]">
             Visual Square ERP
           </p>
@@ -75,7 +76,7 @@ export function Dashboard({ data }: DashboardProps) {
             묶어서 디자인 에이전시와 인쇄 중개 업무의 마진을 추적합니다.
           </p>
         </div>
-        <div className="border border-[var(--border)] bg-[var(--surface)] px-4 py-3 text-sm">
+        <div className="ui-card shrink-0 px-4 py-3 text-sm">
           <p className="font-semibold">Supabase</p>
           <p className="mt-1 text-[var(--muted)]">실제 DB 연결됨</p>
         </div>
@@ -123,7 +124,7 @@ export function Dashboard({ data }: DashboardProps) {
             </div>
             <Link
               href="/projects"
-              className="inline-flex h-9 items-center border border-[var(--coral)] bg-[var(--coral)] px-3 text-sm font-semibold text-white transition hover:bg-[var(--coral-strong)]"
+              className="ui-button min-h-9 px-3"
             >
               <ArrowUpRight className="mr-2 h-4 w-4" aria-hidden="true" />
               프로젝트
@@ -138,18 +139,24 @@ export function Dashboard({ data }: DashboardProps) {
               <Clock3 className="h-4 w-4 text-[var(--coral)]" />
               <h2 className="text-lg font-semibold">마감 임박</h2>
             </div>
-            <div className="border border-[var(--border)] bg-white">
-              {urgentTasks.map((task) => {
+            <div className="ui-card overflow-hidden">
+              {urgentTasks.length === 0 ? (
+                <EmptyState
+                  title="마감 임박 작업 없음"
+                  description="열린 작업이 생기면 여기에 표시됩니다."
+                />
+              ) : (
+                urgentTasks.map((task) => {
                 const project = data.projects.find(
                   (item) => item.id === task.project_id,
                 );
 
                 return (
-                  <div
-                    key={task.id}
-                    className="border-b border-[var(--border)] px-4 py-4 last:border-b-0"
-                  >
-                    <p className="text-sm font-semibold">{task.title}</p>
+                    <div
+                      key={task.id}
+                      className="border-b border-[var(--border)] px-4 py-4 last:border-b-0"
+                    >
+                    <p className="break-words text-sm font-semibold">{task.title}</p>
                     <p className="mt-1 text-xs text-[var(--muted)]">
                       {project?.name}
                     </p>
@@ -161,9 +168,10 @@ export function Dashboard({ data }: DashboardProps) {
                         {task.due_date ? formatUsDate(task.due_date) : "-"}
                       </span>
                     </div>
-                  </div>
-                );
-              })}
+                    </div>
+                  );
+                })
+              )}
             </div>
           </section>
 
@@ -172,15 +180,21 @@ export function Dashboard({ data }: DashboardProps) {
               <AlertCircle className="h-4 w-4 text-[var(--coral)]" />
               <h2 className="text-lg font-semibold">인보이스 상태</h2>
             </div>
-            <div className="border border-[var(--border)] bg-white">
-              {data.invoices.map((invoice) => (
+            <div className="ui-card overflow-hidden">
+              {data.invoices.length === 0 ? (
+                <EmptyState
+                  title="인보이스 없음"
+                  description="발행한 인보이스가 생기면 상태가 표시됩니다."
+                />
+              ) : (
+                data.invoices.map((invoice) => (
                 <div
                   key={invoice.id}
                   className="border-b border-[var(--border)] px-4 py-4 last:border-b-0"
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div>
-                      <p className="text-sm font-semibold">
+                      <p className="break-words text-sm font-semibold">
                         {invoice.invoice_number}
                       </p>
                       <p className="mt-1 text-xs text-[var(--muted)]">
@@ -193,7 +207,7 @@ export function Dashboard({ data }: DashboardProps) {
                     <span className="text-[var(--muted)]">
                       Due {formatUsDate(invoice.due_date)}
                     </span>
-                    <span className="font-semibold">
+                    <span className="font-semibold tabular-nums">
                       {formatCurrency(
                         Math.max(
                           toNumber(invoice.total) - toNumber(invoice.paid_amount),
@@ -203,7 +217,8 @@ export function Dashboard({ data }: DashboardProps) {
                     </span>
                   </div>
                 </div>
-              ))}
+                ))
+              )}
             </div>
           </section>
         </aside>

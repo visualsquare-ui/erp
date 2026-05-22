@@ -76,49 +76,37 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
 
           <form action={signIn} className="mt-8 space-y-4">
             <input type="hidden" name="next" value={next} />
-            <div>
-              <label
-                htmlFor="email"
-                className="text-sm font-semibold text-[var(--foreground)]"
-              >
-                Email
-              </label>
+            <label className="block space-y-1.5">
+              <span className="ui-label">Email</span>
               <input
                 id="email"
                 name="email"
                 type="email"
                 autoComplete="email"
+                spellCheck={false}
                 required
-                className="mt-2 h-11 w-full border border-[var(--border)] bg-white px-3 text-sm outline-none transition focus:border-[var(--coral)]"
+                className="ui-input min-h-11"
               />
-            </div>
-            <div>
-              <label
-                htmlFor="password"
-                className="text-sm font-semibold text-[var(--foreground)]"
-              >
-                Password
-              </label>
+            </label>
+            <label className="block space-y-1.5">
+              <span className="ui-label">Password</span>
               <input
                 id="password"
                 name="password"
                 type="password"
                 autoComplete="current-password"
                 required
-                className="mt-2 h-11 w-full border border-[var(--border)] bg-white px-3 text-sm outline-none transition focus:border-[var(--coral)]"
+                className="ui-input min-h-11"
               />
-            </div>
+            </label>
 
             {message ? (
-              <p className="border border-[#8A1F1F]/25 bg-[#F8E8E8] px-3 py-2 text-sm font-semibold text-[#8A1F1F]">
+              <p className="border border-[#8a1f1f]/25 bg-[#f8e8e8] px-3 py-2 text-sm font-semibold text-[#8a1f1f]">
                 {message}
               </p>
             ) : null}
 
-            <button
-              type="submit"
-              className="h-11 w-full border border-[var(--coral)] bg-[var(--coral)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--coral-strong)]"
-            >
+            <button type="submit" className="ui-button min-h-11 w-full">
               로그인
             </button>
           </form>

@@ -17,10 +17,11 @@ export default async function ProjectsPage() {
         description="고객, 작업, 산출물, 인보이스, 발주·빌이 모이는 허브입니다."
       />
 
-      <section className="grid gap-6 xl:grid-cols-[380px_minmax(0,1fr)]">
-        <form action={createProjectAction} className="space-y-3 border border-[var(--border)] bg-[var(--surface)] p-4">
-          <h2 className="font-semibold">프로젝트 추가</h2>
-          <select className="h-10 w-full border px-3 text-sm" name="client_id" required>
+      <section className="grid gap-6 xl:grid-cols-[22rem_minmax(0,1fr)]">
+        <form action={createProjectAction} className="ui-panel space-y-4">
+          <h2 className="text-sm font-semibold">프로젝트 추가</h2>
+          <Field label="Client">
+          <select className="ui-input" name="client_id" required>
             <option value="">Client</option>
             {clients.map((client) => (
               <option key={client.id} value={client.id}>
@@ -28,26 +29,43 @@ export default async function ProjectsPage() {
               </option>
             ))}
           </select>
-          <input className="h-10 w-full border px-3 text-sm" name="name" placeholder="Project name" required />
-          <select className="h-10 w-full border px-3 text-sm" name="type" defaultValue="print">
+          </Field>
+          <Field label="Name">
+            <input className="ui-input" name="name" placeholder="Menu redesign…" autoComplete="off" required />
+          </Field>
+          <Field label="Type">
+          <select className="ui-input" name="type" defaultValue="print">
             <option value="print">print</option>
             <option value="web">web</option>
             <option value="app">app</option>
             <option value="logo">logo</option>
             <option value="branding">branding</option>
           </select>
-          <select className="h-10 w-full border px-3 text-sm" name="status" defaultValue="quote">
+          </Field>
+          <Field label="Status">
+          <select className="ui-input" name="status" defaultValue="quote">
             <option value="quote">quote</option>
             <option value="in_progress">in_progress</option>
             <option value="done">done</option>
             <option value="on_hold">on_hold</option>
             <option value="canceled">canceled</option>
           </select>
-          <input className="h-10 w-full border px-3 text-sm" name="start_date" type="date" />
-          <input className="h-10 w-full border px-3 text-sm" name="due_date" type="date" />
-          <input className="h-10 w-full border px-3 text-sm" name="quote_amount" type="number" step="0.01" placeholder="Quote amount" />
-          <textarea className="min-h-20 w-full border px-3 py-2 text-sm" name="description" placeholder="Description" />
-          <button className="h-10 w-full border border-[var(--coral)] bg-[var(--coral)] text-sm font-semibold text-white">
+          </Field>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Start">
+              <input className="ui-input" name="start_date" type="date" autoComplete="off" />
+            </Field>
+            <Field label="Due">
+              <input className="ui-input" name="due_date" type="date" autoComplete="off" />
+            </Field>
+          </div>
+          <Field label="Quote">
+            <input className="ui-input" name="quote_amount" type="number" step="0.01" placeholder="4500.00…" inputMode="decimal" />
+          </Field>
+          <Field label="Description">
+            <textarea className="ui-input min-h-20" name="description" placeholder="Scope and delivery notes…" autoComplete="off" />
+          </Field>
+          <button className="ui-button w-full">
             저장
           </button>
         </form>
@@ -55,5 +73,20 @@ export default async function ProjectsPage() {
         <ProjectTable projects={projects} />
       </section>
     </AppShell>
+  );
+}
+
+function Field({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <label className="block space-y-1.5">
+      <span className="ui-label">{label}</span>
+      {children}
+    </label>
   );
 }

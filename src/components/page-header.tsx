@@ -13,13 +13,13 @@ export function PageHeader({
 }: PageHeaderProps) {
   return (
     <section className="mb-6 flex flex-col justify-between gap-4 border-b border-[var(--border)] pb-5 md:flex-row md:items-end">
-      <div>
+      <div className="min-w-0">
         {eyebrow ? (
           <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--coral-strong)]">
             {eyebrow}
           </p>
         ) : null}
-        <h1 className="mt-2 break-keep text-2xl font-semibold md:text-3xl">
+        <h1 className="mt-2 text-pretty break-keep text-2xl font-semibold md:text-3xl">
           {title}
         </h1>
         {description ? (

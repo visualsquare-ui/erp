@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { EmptyState } from "@/components/empty-state";
 import { toNumber } from "@/lib/erp-calculations";
 import { getProjectWorkflow } from "@/lib/project-rules";
 import { formatCurrency, formatUsDate } from "@/lib/format";
@@ -27,32 +28,27 @@ type ProjectTableProps = {
 };
 
 export function ProjectTable({ projects }: ProjectTableProps) {
+  if (projects.length === 0) {
+    return (
+      <EmptyState
+        title="프로젝트 없음"
+        description="왼쪽 폼에서 첫 프로젝트를 추가하세요."
+      />
+    );
+  }
+
   return (
-    <div className="overflow-x-auto border border-[var(--border)] bg-white">
-      <table className="min-w-[860px] w-full border-collapse text-sm">
-        <thead className="bg-[var(--surface)] text-left text-xs uppercase tracking-[0.08em] text-[var(--muted)]">
+    <div className="ui-card overflow-x-auto">
+      <table className="ui-table min-w-[860px]">
+        <thead>
           <tr>
-            <th className="border-b border-[var(--border)] px-4 py-3 font-semibold">
-              프로젝트
-            </th>
-            <th className="border-b border-[var(--border)] px-4 py-3 font-semibold">
-              고객
-            </th>
-            <th className="border-b border-[var(--border)] px-4 py-3 font-semibold">
-              유형
-            </th>
-            <th className="border-b border-[var(--border)] px-4 py-3 font-semibold">
-              상태
-            </th>
-            <th className="border-b border-[var(--border)] px-4 py-3 font-semibold">
-              마감
-            </th>
-            <th className="border-b border-[var(--border)] px-4 py-3 text-right font-semibold">
-              견적
-            </th>
-            <th className="border-b border-[var(--border)] px-4 py-3 font-semibold">
-              발주·빌
-            </th>
+            <th>프로젝트</th>
+            <th>고객</th>
+            <th>유형</th>
+            <th>상태</th>
+            <th>마감</th>
+            <th className="text-right">견적</th>
+            <th>발주·빌</th>
           </tr>
         </thead>
         <tbody>
@@ -61,31 +57,31 @@ export function ProjectTable({ projects }: ProjectTableProps) {
 
             return (
               <tr key={project.id} className="border-b border-[var(--border)]">
-                <td className="px-4 py-4">
+                <td>
                   <Link
                     href={`/projects/${project.id}`}
-                    className="font-semibold text-[var(--foreground)] hover:text-[var(--coral-strong)]"
+                    className="font-semibold text-[var(--foreground)] hover:text-[var(--coral-strong)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--coral)]"
                   >
                     {project.name}
                   </Link>
-                  <div className="mt-1 max-w-[28rem] text-xs text-[var(--muted)]">
+                  <div className="mt-1 max-w-[28rem] break-words text-xs text-[var(--muted)]">
                     {project.description}
                   </div>
                 </td>
-                <td className="px-4 py-4 text-[var(--muted)]">
+                <td className="text-[var(--muted)]">
                   {project.clients?.company_name ?? project.clients?.name}
                 </td>
-                <td className="px-4 py-4">{typeLabels[project.type]}</td>
-                <td className="px-4 py-4">
+                <td>{typeLabels[project.type]}</td>
+                <td>
                   <StatusBadge status={project.status} />
                 </td>
-                <td className="px-4 py-4">
+                <td className="tabular-nums">
                   {project.due_date ? formatUsDate(project.due_date) : "-"}
                 </td>
-                <td className="px-4 py-4 text-right font-semibold">
+                <td className="text-right font-semibold tabular-nums">
                   {formatCurrency(toNumber(project.quote_amount))}
                 </td>
-                <td className="px-4 py-4">
+                <td>
                   <span className="inline-flex h-6 items-center border border-[var(--border)] bg-white px-2 text-xs font-semibold text-[var(--muted)]">
                     {workflowLabels[workflow.purchaseBills]}
                   </span>

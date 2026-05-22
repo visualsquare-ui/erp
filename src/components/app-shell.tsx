@@ -31,8 +31,8 @@ type AppShellProps = {
 export function AppShell({ children, userEmail, activePath }: AppShellProps) {
   return (
     <div className="min-h-screen bg-[var(--background)] text-[var(--foreground)]">
-      <aside className="fixed inset-y-0 left-0 hidden w-64 border-r border-[var(--border)] bg-white lg:flex lg:flex-col">
-        <div className="flex h-20 items-center border-b border-[var(--border)] px-5">
+      <aside className="fixed inset-y-0 left-0 hidden w-[17rem] border-r border-[var(--border)] bg-white lg:flex lg:flex-col">
+        <div className="flex h-[4.5rem] items-center border-b border-[var(--border)] px-5">
           <Image
             src={logo}
             alt="Visual Square"
@@ -40,14 +40,16 @@ export function AppShell({ children, userEmail, activePath }: AppShellProps) {
             priority
           />
           <div className="ml-3">
-            <p className="font-display text-xl leading-none">Visual Square</p>
-            <p className="mt-1 text-xs font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">
+            <p className="font-display text-xl leading-none" translate="no">
+              Visual Square
+            </p>
+            <p className="mt-1 text-[0.68rem] font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">
               ERP
             </p>
           </div>
         </div>
 
-        <nav className="flex-1 space-y-1 px-3 py-4">
+        <nav className="flex-1 space-y-1 px-3 py-4" aria-label="Primary">
           {navItems.map((item) => {
             const active =
               item.href === "/"
@@ -55,38 +57,39 @@ export function AppShell({ children, userEmail, activePath }: AppShellProps) {
                 : activePath.startsWith(item.href);
 
             return (
-            <Link
-              key={item.label}
-              href={item.href}
-              className={`flex h-10 w-full items-center border px-3 text-left text-sm font-semibold transition ${
-                active
-                  ? "border-[var(--coral)] bg-[var(--coral-quiet)] text-[var(--coral-strong)]"
-                  : "border-transparent text-[var(--muted)] hover:border-[var(--border)] hover:bg-[var(--surface)] hover:text-[var(--foreground)]"
-              }`}
-            >
-              <item.icon className="mr-3 h-4 w-4" aria-hidden="true" />
-              {item.label}
-            </Link>
+              <Link
+                key={item.label}
+                href={item.href}
+                aria-current={active ? "page" : undefined}
+                className={`flex h-10 w-full items-center border px-3 text-left text-sm font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--coral)] ${
+                  active
+                    ? "border-[var(--coral)] bg-[var(--coral-quiet)] text-[var(--coral-strong)]"
+                    : "border-transparent text-[var(--muted)] hover:border-[var(--border)] hover:bg-[var(--surface)] hover:text-[var(--foreground)]"
+                }`}
+              >
+                <item.icon className="mr-3 h-4 w-4" aria-hidden="true" />
+                {item.label}
+              </Link>
             );
           })}
         </nav>
 
         <div className="border-t border-[var(--border)] p-4 text-xs leading-5 text-[var(--muted)]">
-          <p className="font-semibold text-[var(--foreground)]">Phase 2-8</p>
-          <p>Supabase 연결 · 내부 ERP MVP</p>
+          <p className="font-semibold text-[var(--foreground)]">Internal ERP</p>
+          <p>Supabase 연결 · 실제 데이터</p>
         </div>
       </aside>
 
-      <div className="lg:pl-64">
-        <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-[var(--border)] bg-white/95 px-4 backdrop-blur lg:px-8">
-          <div className="flex items-center gap-3 lg:hidden">
+      <div className="lg:pl-[17rem]">
+        <header className="sticky top-0 z-20 flex h-[4.5rem] items-center justify-between border-b border-[var(--border)] bg-white/95 px-4 backdrop-blur lg:px-8">
+          <div className="min-w-0 flex items-center gap-3 lg:hidden">
             <Image
               src={logo}
               alt="Visual Square"
               className="h-9 w-9 object-contain"
               priority
             />
-            <span className="font-display text-lg">Visual Square ERP</span>
+            <span className="font-display truncate text-lg">Visual Square ERP</span>
           </div>
           <div className="hidden lg:block">
             <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">
@@ -96,13 +99,15 @@ export function AppShell({ children, userEmail, activePath }: AppShellProps) {
           <div className="flex items-center gap-3">
             <div className="hidden items-center gap-2 text-xs text-[var(--muted)] sm:flex">
               <span className="h-2 w-2 bg-[var(--coral)]" />
-              {userEmail}
+              <span className="max-w-[15rem] truncate">{userEmail}</span>
             </div>
             <SignOutButton />
           </div>
         </header>
 
-        <main className="px-4 py-6 lg:px-8">{children}</main>
+        <main className="mx-auto max-w-[86rem] px-4 py-6 lg:px-8">
+          {children}
+        </main>
       </div>
     </div>
   );
