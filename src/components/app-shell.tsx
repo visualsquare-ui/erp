@@ -32,21 +32,13 @@ export function AppShell({ children, userEmail, activePath }: AppShellProps) {
   return (
     <div className="min-h-screen bg-[var(--background)] text-[var(--foreground)]">
       <aside className="fixed inset-y-0 left-0 hidden w-[17rem] border-r border-[var(--border)] bg-white lg:flex lg:flex-col">
-        <div className="flex h-[4.5rem] items-center border-b border-[var(--border)] px-5">
+        <div className="flex h-24 items-center border-b border-[var(--border)] px-5">
           <Image
             src={logo}
             alt="Visual Square"
-            className="h-12 w-12 object-contain"
+            className="h-20 w-44 object-cover object-center"
             priority
           />
-          <div className="ml-3">
-            <p className="font-display text-xl leading-none" translate="no">
-              Visual Square
-            </p>
-            <p className="mt-1 text-[0.68rem] font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">
-              ERP
-            </p>
-          </div>
         </div>
 
         <nav className="flex-1 space-y-1 px-3 py-4" aria-label="Primary">
