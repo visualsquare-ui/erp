@@ -1,24 +1,15 @@
-import { AppShell } from "@/components/app-shell";
 import { Dashboard } from "@/components/dashboard";
-import { getLoginRedirectPath } from "@/lib/auth-routes";
-import { createClient } from "@/lib/supabase/server";
-import { redirect } from "next/navigation";
+import { AppShell } from "@/components/app-shell";
+import { getDashboardData } from "@/lib/erp-data";
 
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect(getLoginRedirectPath("/"));
-  }
+  const data = await getDashboardData();
 
   return (
-    <AppShell userEmail={user.email ?? "Staff"}>
-      <Dashboard />
+    <AppShell userEmail={data.user.email ?? "Staff"} activePath="/">
+      <Dashboard data={data} />
     </AppShell>
   );
 }

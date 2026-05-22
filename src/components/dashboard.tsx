@@ -1,38 +1,63 @@
+import Link from "next/link";
 import { AlertCircle, ArrowUpRight, Clock3 } from "lucide-react";
 
-import { formatCurrency, formatUsDate } from "@/lib/format";
 import {
-  assets,
-  clients,
-  invoices,
-  projects,
-  tasks,
-  vendorBills,
-} from "@/lib/sample-data";
-import { hasSupabaseConfig } from "@/lib/supabase";
+  calculateOutstandingAp,
+  calculateOutstandingAr,
+  toNumber,
+} from "@/lib/erp-calculations";
+import { formatCurrency, formatUsDate } from "@/lib/format";
+import type {
+  AssetRow,
+  ClientRow,
+  InvoiceRow,
+  ProjectRow,
+  TaskRow,
+  VendorBillRow,
+} from "@/types/database";
 
 import { MetricCard } from "./metric-card";
 import { ProjectTable } from "./project-table";
 import { StatusBadge } from "./status-badge";
 
-export function Dashboard() {
-  const supabaseConfigured = hasSupabaseConfig();
-  const activeProjects = projects.filter(
+type DashboardProps = {
+  data: {
+    clients: ClientRow[];
+    projects: ProjectRow[];
+    tasks: TaskRow[];
+    invoices: InvoiceRow[];
+    bills: VendorBillRow[];
+    assets: AssetRow[];
+  };
+};
+
+export function Dashboard({ data }: DashboardProps) {
+  const activeProjects = data.projects.filter(
     (project) => project.status === "in_progress" || project.status === "quote",
   );
-  const sentInvoices = invoices.filter((invoice) => invoice.status !== "paid");
-  const openBills = vendorBills.filter((bill) => bill.status !== "paid");
-  const outstandingAr = sentInvoices.reduce(
-    (sum, invoice) => sum + invoice.total - invoice.paidAmount,
-    0,
+  const sentInvoices = data.invoices.filter(
+    (invoice) => invoice.status !== "paid",
   );
-  const outstandingAp = openBills.reduce((sum, bill) => sum + bill.amount, 0);
-  const monthlyRevenue = invoices
-    .filter((invoice) => invoice.issueDate.startsWith("2026-05"))
-    .reduce((sum, invoice) => sum + invoice.total, 0);
-  const urgentTasks = tasks
+  const openBills = data.bills.filter((bill) => bill.status !== "paid");
+  const outstandingAr = calculateOutstandingAr(
+    data.invoices.map((invoice) => ({
+      total: toNumber(invoice.total),
+      paidAmount: toNumber(invoice.paid_amount),
+      status: invoice.status,
+    })),
+  );
+  const outstandingAp = calculateOutstandingAp(
+    data.bills.map((bill) => ({
+      amount: toNumber(bill.amount),
+      status: bill.status,
+    })),
+  );
+  const monthlyRevenue = data.invoices
+    .filter((invoice) => invoice.issue_date.startsWith("2026-05"))
+    .reduce((sum, invoice) => sum + toNumber(invoice.total), 0);
+  const urgentTasks = data.tasks
     .filter((task) => task.status !== "done")
-    .sort((a, b) => a.dueDate.localeCompare(b.dueDate))
+    .sort((a, b) => (a.due_date ?? "").localeCompare(b.due_date ?? ""))
     .slice(0, 3);
 
   return (
@@ -52,11 +77,7 @@ export function Dashboard() {
         </div>
         <div className="border border-[var(--border)] bg-[var(--surface)] px-4 py-3 text-sm">
           <p className="font-semibold">Supabase</p>
-          <p className="mt-1 text-[var(--muted)]">
-            {supabaseConfigured
-              ? "env 연결됨: Phase 1 SQL 실행 대기"
-              : "env 연결 전: 샘플 데이터 표시"}
-          </p>
+          <p className="mt-1 text-[var(--muted)]">실제 DB 연결됨</p>
         </div>
       </section>
 
@@ -64,7 +85,7 @@ export function Dashboard() {
         <MetricCard
           label="진행 프로젝트"
           value={`${activeProjects.length}`}
-          detail={`${clients.length}개 고객 기준`}
+          detail={`${data.clients.length}개 고객 기준`}
           tone="coral"
         />
         <MetricCard
@@ -86,7 +107,7 @@ export function Dashboard() {
         />
         <MetricCard
           label="포트폴리오"
-          value={`${assets.filter((asset) => asset.isPortfolio).length}`}
+          value={`${data.assets.filter((asset) => asset.is_portfolio).length}`}
           detail="쇼케이스 노출 자산"
         />
       </section>
@@ -100,15 +121,15 @@ export function Dashboard() {
                 유형별로 발주·빌 워크플로우 노출이 달라집니다.
               </p>
             </div>
-            <button
-              type="button"
+            <Link
+              href="/projects"
               className="inline-flex h-9 items-center border border-[var(--coral)] bg-[var(--coral)] px-3 text-sm font-semibold text-white transition hover:bg-[var(--coral-strong)]"
             >
               <ArrowUpRight className="mr-2 h-4 w-4" aria-hidden="true" />
-              새 프로젝트
-            </button>
+              프로젝트
+            </Link>
           </div>
-          <ProjectTable />
+          <ProjectTable projects={data.projects} />
         </div>
 
         <aside className="space-y-6">
@@ -119,8 +140,8 @@ export function Dashboard() {
             </div>
             <div className="border border-[var(--border)] bg-white">
               {urgentTasks.map((task) => {
-                const project = projects.find(
-                  (item) => item.id === task.projectId,
+                const project = data.projects.find(
+                  (item) => item.id === task.project_id,
                 );
 
                 return (
@@ -137,7 +158,7 @@ export function Dashboard() {
                         {task.assignee}
                       </span>
                       <span className="text-xs font-semibold">
-                        {formatUsDate(task.dueDate)}
+                        {task.due_date ? formatUsDate(task.due_date) : "-"}
                       </span>
                     </div>
                   </div>
@@ -152,38 +173,37 @@ export function Dashboard() {
               <h2 className="text-lg font-semibold">인보이스 상태</h2>
             </div>
             <div className="border border-[var(--border)] bg-white">
-              {invoices.map((invoice) => {
-                const client = clients.find(
-                  (item) => item.id === invoice.clientId,
-                );
-
-                return (
-                  <div
-                    key={invoice.id}
-                    className="border-b border-[var(--border)] px-4 py-4 last:border-b-0"
-                  >
-                    <div className="flex items-start justify-between gap-4">
-                      <div>
-                        <p className="text-sm font-semibold">
-                          {invoice.invoiceNumber}
-                        </p>
-                        <p className="mt-1 text-xs text-[var(--muted)]">
-                          {client?.companyName}
-                        </p>
-                      </div>
-                      <StatusBadge status={invoice.status} />
+              {data.invoices.map((invoice) => (
+                <div
+                  key={invoice.id}
+                  className="border-b border-[var(--border)] px-4 py-4 last:border-b-0"
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <p className="text-sm font-semibold">
+                        {invoice.invoice_number}
+                      </p>
+                      <p className="mt-1 text-xs text-[var(--muted)]">
+                        {invoice.clients?.company_name ?? invoice.clients?.name}
+                      </p>
                     </div>
-                    <div className="mt-3 flex items-center justify-between text-sm">
-                      <span className="text-[var(--muted)]">
-                        Due {formatUsDate(invoice.dueDate)}
-                      </span>
-                      <span className="font-semibold">
-                        {formatCurrency(invoice.total - invoice.paidAmount)}
-                      </span>
-                    </div>
+                    <StatusBadge status={invoice.status} />
                   </div>
-                );
-              })}
+                  <div className="mt-3 flex items-center justify-between text-sm">
+                    <span className="text-[var(--muted)]">
+                      Due {formatUsDate(invoice.due_date)}
+                    </span>
+                    <span className="font-semibold">
+                      {formatCurrency(
+                        Math.max(
+                          toNumber(invoice.total) - toNumber(invoice.paid_amount),
+                          0,
+                        ),
+                      )}
+                    </span>
+                  </div>
+                </div>
+              ))}
             </div>
           </section>
         </aside>

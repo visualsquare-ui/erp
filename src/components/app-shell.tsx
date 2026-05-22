@@ -1,6 +1,6 @@
 import Image from "next/image";
+import Link from "next/link";
 import {
-  BarChart3,
   BriefcaseBusiness,
   FileText,
   GalleryHorizontalEnd,
@@ -14,21 +14,21 @@ import { SignOutButton } from "@/components/sign-out-button";
 import logo from "../../assets/vs-logo-transparent.png";
 
 const navItems = [
-  { label: "대시보드", icon: LayoutDashboard, active: true },
-  { label: "고객", icon: UsersRound, active: false },
-  { label: "프로젝트", icon: BriefcaseBusiness, active: false },
-  { label: "인보이스", icon: FileText, active: false },
-  { label: "발주·빌", icon: ReceiptText, active: false },
-  { label: "포트폴리오", icon: GalleryHorizontalEnd, active: false },
-  { label: "리포트", icon: BarChart3, active: false },
+  { label: "대시보드", href: "/", icon: LayoutDashboard },
+  { label: "고객", href: "/clients", icon: UsersRound },
+  { label: "프로젝트", href: "/projects", icon: BriefcaseBusiness },
+  { label: "인보이스", href: "/invoices", icon: FileText },
+  { label: "발주·빌", href: "/purchasing", icon: ReceiptText },
+  { label: "포트폴리오", href: "/portfolio", icon: GalleryHorizontalEnd },
 ];
 
 type AppShellProps = {
   children: React.ReactNode;
   userEmail: string;
+  activePath: string;
 };
 
-export function AppShell({ children, userEmail }: AppShellProps) {
+export function AppShell({ children, userEmail, activePath }: AppShellProps) {
   return (
     <div className="min-h-screen bg-[var(--background)] text-[var(--foreground)]">
       <aside className="fixed inset-y-0 left-0 hidden w-64 border-r border-[var(--border)] bg-white lg:flex lg:flex-col">
@@ -48,25 +48,32 @@ export function AppShell({ children, userEmail }: AppShellProps) {
         </div>
 
         <nav className="flex-1 space-y-1 px-3 py-4">
-          {navItems.map((item) => (
-            <button
+          {navItems.map((item) => {
+            const active =
+              item.href === "/"
+                ? activePath === "/"
+                : activePath.startsWith(item.href);
+
+            return (
+            <Link
               key={item.label}
-              type="button"
+              href={item.href}
               className={`flex h-10 w-full items-center border px-3 text-left text-sm font-semibold transition ${
-                item.active
+                active
                   ? "border-[var(--coral)] bg-[var(--coral-quiet)] text-[var(--coral-strong)]"
                   : "border-transparent text-[var(--muted)] hover:border-[var(--border)] hover:bg-[var(--surface)] hover:text-[var(--foreground)]"
               }`}
             >
               <item.icon className="mr-3 h-4 w-4" aria-hidden="true" />
               {item.label}
-            </button>
-          ))}
+            </Link>
+            );
+          })}
         </nav>
 
         <div className="border-t border-[var(--border)] p-4 text-xs leading-5 text-[var(--muted)]">
-          <p className="font-semibold text-[var(--foreground)]">Phase 0</p>
-          <p>로컬 UI 셸 · 샘플 데이터 · Supabase 연결 준비</p>
+          <p className="font-semibold text-[var(--foreground)]">Phase 2-8</p>
+          <p>Supabase 연결 · 내부 ERP MVP</p>
         </div>
       </aside>
 
