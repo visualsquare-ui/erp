@@ -2,7 +2,10 @@
 
 import { useEffect, useMemo, useState } from "react";
 
-import { createClientAction } from "@/app/actions";
+import { createClientAction, updateClientAction } from "@/app/actions";
+import { calculateOutstandingAr, toNumber } from "@/lib/erp-calculations";
+import { formatCurrency } from "@/lib/format";
+import type { ClientRow, InvoiceRow, ProjectRow } from "@/types/database";
 
 type AddressSuggestion = {
   label: string;
@@ -14,6 +17,29 @@ type AddressSuggestion = {
 
 type AddressSuggestionsResponse = {
   suggestions: AddressSuggestion[];
+};
+
+type ClientWithRelations = ClientRow & {
+  projects: ProjectRow[];
+  invoices: InvoiceRow[];
+};
+
+type AddressParts = {
+  street: string;
+  street1: string;
+  city: string;
+  state: string;
+  zip: string;
+};
+
+type ClientFormValues = {
+  id?: string;
+  companyName?: string | null;
+  name?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  address?: string | null;
+  memo?: string | null;
 };
 
 function Field({
@@ -53,13 +79,7 @@ function buildAddress({
   city,
   state,
   zip,
-}: {
-  street: string;
-  street1: string;
-  city: string;
-  state: string;
-  zip: string;
-}) {
+}: AddressParts) {
   const line1 = street.trim();
   const line2 = street1.trim();
   const cityStateZip = [city.trim(), state.trim(), zip.trim()]
@@ -69,13 +89,93 @@ function buildAddress({
   return [line1, line2, cityStateZip].filter(Boolean).join(", ");
 }
 
-export function ClientCreateForm() {
-  const [phone, setPhone] = useState("");
-  const [street, setStreet] = useState("");
-  const [street1, setStreet1] = useState("");
-  const [city, setCity] = useState("");
-  const [state, setState] = useState("");
-  const [zip, setZip] = useState("");
+function parseStateZip(value: string) {
+  const match = value.trim().match(/^([A-Z]{2})\s+(\d{5}(?:-\d{4})?)$/i);
+
+  if (!match) {
+    return null;
+  }
+
+  return {
+    state: match[1].toUpperCase(),
+    zip: match[2],
+  };
+}
+
+function parseCityStateZip(value: string) {
+  const match = value
+    .trim()
+    .match(/^(.+?)\s+([A-Z]{2})\s+(\d{5}(?:-\d{4})?)$/i);
+
+  if (!match) {
+    return null;
+  }
+
+  return {
+    city: match[1],
+    state: match[2].toUpperCase(),
+    zip: match[3],
+  };
+}
+
+function parseAddress(address?: string | null): AddressParts {
+  if (!address) {
+    return { street: "", street1: "", city: "", state: "", zip: "" };
+  }
+
+  const parts = address
+    .split(",")
+    .map((part) => part.trim())
+    .filter(Boolean);
+  const [street = ""] = parts;
+
+  if (parts.length >= 3) {
+    const stateZip = parseStateZip(parts[parts.length - 1]);
+
+    if (stateZip) {
+      return {
+        street,
+        street1: parts.length > 3 ? parts.slice(1, -2).join(", ") : "",
+        city: parts[parts.length - 2],
+        state: stateZip.state,
+        zip: stateZip.zip,
+      };
+    }
+  }
+
+  if (parts.length >= 2) {
+    const cityStateZip = parseCityStateZip(parts[parts.length - 1]);
+
+    if (cityStateZip) {
+      return {
+        street,
+        street1: parts.length > 2 ? parts.slice(1, -1).join(", ") : "",
+        ...cityStateZip,
+      };
+    }
+  }
+
+  return { street: address, street1: "", city: "", state: "", zip: "" };
+}
+
+function ClientForm({
+  mode,
+  initialValues,
+  onCancel,
+  onSaved,
+}: {
+  mode: "create" | "edit";
+  initialValues?: ClientFormValues;
+  onCancel: () => void;
+  onSaved: () => void;
+}) {
+  const initialAddress = parseAddress(initialValues?.address);
+  const [phone, setPhone] = useState(formatPhoneNumber(initialValues?.phone ?? ""));
+  const [street, setStreet] = useState(initialAddress.street);
+  const [street1, setStreet1] = useState(initialAddress.street1);
+  const [city, setCity] = useState(initialAddress.city);
+  const [state, setState] = useState(initialAddress.state);
+  const [zip, setZip] = useState(initialAddress.zip);
   const [suggestions, setSuggestions] = useState<AddressSuggestion[]>([]);
   const [isSuggesting, setIsSuggesting] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -129,15 +229,43 @@ export function ClientCreateForm() {
     setShowSuggestions(false);
   }
 
+  async function submitClient(formData: FormData) {
+    if (mode === "edit") {
+      await updateClientAction(formData);
+    } else {
+      await createClientAction(formData);
+    }
+
+    onSaved();
+  }
+
   return (
-    <form action={createClientAction} className="ui-panel space-y-4">
-      <h2 className="text-sm font-semibold">고객 추가</h2>
+    <form action={submitClient} className="ui-panel space-y-4">
+      <div className="flex items-center justify-between gap-3">
+        <h2 className="text-sm font-semibold">
+          {mode === "edit" ? "고객 수정" : "고객 추가"}
+        </h2>
+        <button
+          type="button"
+          className="text-sm font-semibold text-[var(--muted)] hover:text-[var(--foreground)]"
+          onClick={onCancel}
+        >
+          닫기
+        </button>
+      </div>
+
+      {initialValues?.id ? (
+        <input type="hidden" name="client_id" value={initialValues.id} />
+      ) : null}
+      <input type="hidden" name="address" value={combinedAddress} />
+
       <Field label="Company">
         <input
           className="ui-input"
           name="company_name"
           placeholder="Visual Square…"
           autoComplete="organization"
+          defaultValue={initialValues?.companyName ?? ""}
         />
       </Field>
       <Field label="Contact">
@@ -147,6 +275,7 @@ export function ClientCreateForm() {
           placeholder="Jane Kim…"
           autoComplete="name"
           required
+          defaultValue={initialValues?.name ?? ""}
         />
       </Field>
       <Field label="Email">
@@ -157,6 +286,7 @@ export function ClientCreateForm() {
           placeholder="jane@example.com…"
           autoComplete="email"
           spellCheck={false}
+          defaultValue={initialValues?.email ?? ""}
         />
       </Field>
       <Field label="Phone">
@@ -171,8 +301,6 @@ export function ClientCreateForm() {
           onChange={(event) => setPhone(formatPhoneNumber(event.target.value))}
         />
       </Field>
-
-      <input type="hidden" name="address" value={combinedAddress} />
 
       <div className="space-y-3">
         <div className="relative">
@@ -270,9 +398,171 @@ export function ClientCreateForm() {
           name="memo"
           placeholder="Internal note…"
           autoComplete="off"
+          defaultValue={initialValues?.memo ?? ""}
         />
       </Field>
-      <button className="ui-button w-full">저장</button>
+
+      <div className="grid gap-2 sm:grid-cols-2">
+        <button type="button" className="ui-button ui-button-secondary" onClick={onCancel}>
+          취소
+        </button>
+        <button className="ui-button">
+          {mode === "edit" ? "저장" : "추가"}
+        </button>
+      </div>
     </form>
+  );
+}
+
+function formatClientPhone(phone: string | null) {
+  return phone ? formatPhoneNumber(phone) : "no phone";
+}
+
+export function ClientManagement({
+  clients,
+}: {
+  clients: ClientWithRelations[];
+}) {
+  const [formMode, setFormMode] = useState<"closed" | "create" | "edit">(
+    "closed",
+  );
+  const [editingClient, setEditingClient] = useState<ClientWithRelations | null>(
+    null,
+  );
+
+  function closeForm() {
+    setFormMode("closed");
+    setEditingClient(null);
+  }
+
+  return (
+    <section className="space-y-4">
+      <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+        <div>
+          <h2 className="text-lg font-semibold">고객 목록</h2>
+          <p className="mt-1 text-sm text-[var(--muted)]">
+            기존 고객을 먼저 확인하고 필요할 때 추가하거나 수정합니다.
+          </p>
+        </div>
+        <button
+          type="button"
+          className="ui-button sm:w-auto"
+          onClick={() => {
+            setEditingClient(null);
+            setFormMode("create");
+          }}
+        >
+          고객 추가
+        </button>
+      </div>
+
+      {formMode !== "closed" ? (
+        <ClientForm
+          key={editingClient?.id ?? "new-client"}
+          mode={formMode === "edit" ? "edit" : "create"}
+          initialValues={
+            editingClient
+              ? {
+                  id: editingClient.id,
+                  companyName: editingClient.company_name,
+                  name: editingClient.name,
+                  email: editingClient.email,
+                  phone: editingClient.phone,
+                  address: editingClient.address,
+                  memo: editingClient.memo,
+                }
+              : undefined
+          }
+          onCancel={closeForm}
+          onSaved={closeForm}
+        />
+      ) : null}
+
+      <div className="ui-card overflow-hidden">
+        {clients.length === 0 ? (
+          <div className="border border-dashed border-[var(--border-strong)] bg-[var(--surface)] px-4 py-8 text-center">
+            <p className="font-semibold">고객 없음</p>
+            <p className="mt-2 text-sm text-[var(--muted)]">
+              고객 추가를 눌러 첫 고객을 등록하세요.
+            </p>
+          </div>
+        ) : (
+          clients.map((client) => {
+            const revenue = client.invoices.reduce(
+              (sum, invoice) => sum + toNumber(invoice.total),
+              0,
+            );
+            const outstanding = calculateOutstandingAr(
+              client.invoices.map((invoice) => ({
+                total: toNumber(invoice.total),
+                paidAmount: toNumber(invoice.paid_amount),
+                status: invoice.status,
+              })),
+            );
+
+            return (
+              <article
+                key={client.id}
+                className="grid gap-4 border-b border-[var(--border)] p-5 last:border-b-0 md:grid-cols-[minmax(0,1fr)_220px]"
+              >
+                <div className="min-w-0">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="min-w-0">
+                      <h3 className="break-words font-semibold">
+                        {client.company_name ?? client.name}
+                      </h3>
+                      <p className="mt-1 break-words text-sm text-[var(--muted)]">
+                        {client.name} · {client.email ?? "no email"} ·{" "}
+                        {formatClientPhone(client.phone)}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      className="shrink-0 text-sm font-semibold text-[var(--coral-strong)] hover:text-[var(--foreground)]"
+                      onClick={() => {
+                        setEditingClient(client);
+                        setFormMode("edit");
+                      }}
+                    >
+                      수정
+                    </button>
+                  </div>
+                  {client.address ? (
+                    <p className="mt-2 break-words text-sm text-[var(--muted)]">
+                      {client.address}
+                    </p>
+                  ) : null}
+                  {client.memo ? (
+                    <p className="mt-2 break-words text-sm text-[var(--muted)]">
+                      {client.memo}
+                    </p>
+                  ) : null}
+                </div>
+                <div className="grid grid-cols-3 gap-2 text-sm md:grid-cols-1">
+                  <div>
+                    <p className="text-xs text-[var(--muted)]">Projects</p>
+                    <p className="font-semibold tabular-nums">
+                      {client.projects.length}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-[var(--muted)]">Revenue</p>
+                    <p className="font-semibold tabular-nums">
+                      {formatCurrency(revenue)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-[var(--muted)]">AR</p>
+                    <p className="font-semibold tabular-nums">
+                      {formatCurrency(outstanding)}
+                    </p>
+                  </div>
+                </div>
+              </article>
+            );
+          })
+        )}
+      </div>
+    </section>
   );
 }

@@ -44,6 +44,30 @@ export async function createClientAction(formData: FormData) {
   revalidatePath("/");
 }
 
+export async function updateClientAction(formData: FormData) {
+  const clientId = text(formData, "client_id");
+
+  if (!clientId) {
+    return;
+  }
+
+  const { supabase } = await getAuthedSupabase("/clients");
+  await supabase
+    .from("clients")
+    .update({
+      name: text(formData, "name") ?? "New contact",
+      company_name: text(formData, "company_name"),
+      email: text(formData, "email"),
+      phone: text(formData, "phone"),
+      address: text(formData, "address"),
+      memo: text(formData, "memo"),
+    })
+    .eq("id", clientId);
+
+  revalidatePath("/clients");
+  revalidatePath("/");
+}
+
 export async function createProjectAction(formData: FormData) {
   const { supabase } = await getAuthedSupabase("/projects");
   const { data } = await supabase
