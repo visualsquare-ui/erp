@@ -1,7 +1,7 @@
 import { AppShell } from "@/components/app-shell";
+import { ClientCreateForm } from "@/components/client-create-form";
 import { EmptyState } from "@/components/empty-state";
 import { PageHeader } from "@/components/page-header";
-import { createClientAction } from "@/app/actions";
 import { toNumber, calculateOutstandingAr } from "@/lib/erp-calculations";
 import { getClientsPageData } from "@/lib/erp-data";
 import { formatCurrency } from "@/lib/format";
@@ -20,33 +20,7 @@ export default async function ClientsPage() {
       />
 
       <section className="grid gap-6 xl:grid-cols-[22rem_minmax(0,1fr)]">
-        <form
-          action={createClientAction}
-          className="ui-panel space-y-4"
-        >
-          <h2 className="text-sm font-semibold">고객 추가</h2>
-          <Field label="Company">
-            <input className="ui-input" name="company_name" placeholder="Visual Square…" autoComplete="organization" />
-          </Field>
-          <Field label="Contact">
-            <input className="ui-input" name="name" placeholder="Jane Kim…" autoComplete="name" required />
-          </Field>
-          <Field label="Email">
-            <input className="ui-input" name="email" type="email" placeholder="jane@example.com…" autoComplete="email" spellCheck={false} />
-          </Field>
-          <Field label="Phone">
-            <input className="ui-input" name="phone" type="tel" placeholder="(201) 555-0123…" autoComplete="tel" />
-          </Field>
-          <Field label="Address">
-            <textarea className="ui-input min-h-20" name="address" placeholder="Street, City, State ZIP…" autoComplete="street-address" />
-          </Field>
-          <Field label="Memo">
-            <textarea className="ui-input min-h-20" name="memo" placeholder="Internal note…" autoComplete="off" />
-          </Field>
-          <button className="ui-button w-full">
-            저장
-          </button>
-        </form>
+        <ClientCreateForm />
 
         <div className="ui-card overflow-hidden">
           {clients.length === 0 ? (
@@ -105,20 +79,5 @@ export default async function ClientsPage() {
         </div>
       </section>
     </AppShell>
-  );
-}
-
-function Field({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <label className="block space-y-1.5">
-      <span className="ui-label">{label}</span>
-      {children}
-    </label>
   );
 }
