@@ -92,9 +92,24 @@ describe("document numbering", () => {
     expect(displayNumbers.get("98a124fb-81c4-4eff-b8ff-9e47d85c8418")).toBe(
       "BDOP-05232026-01",
     );
-    expect(displayNumbers.get("manual-bill")).toBe("052326-1");
+    expect(displayNumbers.get("manual-bill")).toBe("BDOP-05232026-02");
     expect(displayNumbers.get("ba6ddf52-e93b-4041-9454-4e874ad206aa")).toBe(
-      "BDOP-05232026-02",
+      "BDOP-05232026-03",
     );
+  });
+
+  it("displays generated bill numbers for legacy internal bill numbers", () => {
+    const displayNumbers = buildVendorBillDisplayNumbers([
+      {
+        id: "legacy-bill",
+        bill_number: "052326-1",
+        vendor_id: "vendor-1",
+        received_date: "2026-05-23",
+        created_at: "2026-05-23T13:00:00Z",
+        vendors: { name: "BDO Printing" },
+      },
+    ]);
+
+    expect(displayNumbers.get("legacy-bill")).toBe("BDOP-05232026-01");
   });
 });

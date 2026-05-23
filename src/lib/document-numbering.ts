@@ -51,6 +51,10 @@ export function buildGeneratedVendorBillNumber({
   )}`;
 }
 
+export function isLegacyInternalVendorBillNumber(value: string) {
+  return /^\d{6}-\d+$/.test(value.trim());
+}
+
 export function buildGeneratedPurchaseOrderNumber({
   orderDate,
   sequence,
@@ -102,7 +106,10 @@ export function buildVendorBillDisplayNumbers(bills: BillForNumbering[]) {
   });
 
   sortedBills.forEach((bill) => {
-    if (bill.bill_number?.trim()) {
+    if (
+      bill.bill_number?.trim() &&
+      !isLegacyInternalVendorBillNumber(bill.bill_number)
+    ) {
       displayNumbers.set(bill.id, bill.bill_number.trim());
       return;
     }
