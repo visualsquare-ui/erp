@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import {
   calculateInvoiceDraft,
   isExtraRevision,
+  roundMoney,
   toNumber,
 } from "@/lib/erp-calculations";
 import { addPaymentTermDays, type PaymentTerms } from "@/lib/format";
@@ -28,6 +29,60 @@ function checkbox(formData: FormData, key: string): boolean {
 
 function todayIso(): string {
   return new Date().toISOString().slice(0, 10);
+}
+
+type PurchaseOrderItemInput = {
+  item: string;
+  unitPrice: number;
+  qty: number;
+};
+
+function parsePurchaseOrderItems(formData: FormData): {
+  items: PurchaseOrderItemInput[];
+  total: number;
+  spec: string | null;
+} {
+  const rawItems = text(formData, "po_items_json");
+
+  if (!rawItems) {
+    return {
+      items: [],
+      total: money(formData, "amount"),
+      spec: text(formData, "spec"),
+    };
+  }
+
+  let parsed: unknown;
+
+  try {
+    parsed = JSON.parse(rawItems);
+  } catch {
+    parsed = [];
+  }
+
+  const items = Array.isArray(parsed)
+    ? parsed
+        .map((item) => {
+          const source = item as Partial<PurchaseOrderItemInput>;
+
+          return {
+            item: String(source.item ?? "").trim(),
+            unitPrice: toNumber(source.unitPrice),
+            qty: toNumber(source.qty) || 1,
+          };
+        })
+        .filter((item) => item.item && item.unitPrice >= 0 && item.qty > 0)
+    : [];
+
+  const total = roundMoney(
+    items.reduce((sum, item) => sum + item.unitPrice * item.qty, 0),
+  );
+
+  return {
+    items,
+    total,
+    spec: JSON.stringify({ items }),
+  };
 }
 
 export async function createClientAction(formData: FormData) {
@@ -227,6 +282,7 @@ export async function deleteVendorAction(formData: FormData) {
 export async function createPurchaseOrderAction(formData: FormData) {
   const projectId = String(formData.get("project_id"));
   const returnPath = text(formData, "return_path") ?? "/purchasing";
+  const orderItems = parsePurchaseOrderItems(formData);
   const { supabase } = await getAuthedSupabase(returnPath);
   await supabase.from("purchase_orders").insert({
     project_id: projectId,
@@ -234,8 +290,8 @@ export async function createPurchaseOrderAction(formData: FormData) {
     po_number: text(formData, "po_number") ?? `PO-${Date.now()}`,
     order_date: text(formData, "order_date") ?? todayIso(),
     expected_date: text(formData, "expected_date"),
-    spec: text(formData, "spec"),
-    amount: money(formData, "amount"),
+    spec: orderItems.spec,
+    amount: orderItems.total,
     status: text(formData, "status") ?? "ordered",
   });
   revalidatePath("/purchasing");
@@ -251,6 +307,7 @@ export async function updatePurchaseOrderAction(formData: FormData) {
     return;
   }
 
+  const orderItems = parsePurchaseOrderItems(formData);
   const { supabase } = await getAuthedSupabase("/purchasing");
   await supabase
     .from("purchase_orders")
@@ -260,8 +317,8 @@ export async function updatePurchaseOrderAction(formData: FormData) {
       po_number: text(formData, "po_number") ?? `PO-${Date.now()}`,
       order_date: text(formData, "order_date") ?? todayIso(),
       expected_date: text(formData, "expected_date"),
-      spec: text(formData, "spec"),
-      amount: money(formData, "amount"),
+      spec: orderItems.spec,
+      amount: orderItems.total,
       status: text(formData, "status") ?? "ordered",
     })
     .eq("id", orderId);

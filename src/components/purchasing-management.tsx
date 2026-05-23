@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Pencil, Trash2 } from "lucide-react";
+import { Pencil, Plus, Trash2 } from "lucide-react";
 
 import {
   createPurchaseOrderAction,
@@ -29,12 +29,62 @@ type PurchasingManagementProps = {
   bills: VendorBillRow[];
 };
 
+type PurchaseOrderItem = {
+  item: string;
+  unitPrice: string;
+  qty: string;
+};
+
+function parsePurchaseOrderItems(order?: PurchaseOrderRow): PurchaseOrderItem[] {
+  if (!order) {
+    return [{ item: "", unitPrice: "", qty: "1" }];
+  }
+
+  if (order.spec) {
+    try {
+      const parsed = JSON.parse(order.spec) as {
+        items?: {
+          item?: string;
+          unitPrice?: number | string;
+          qty?: number | string;
+        }[];
+      };
+
+      if (Array.isArray(parsed.items) && parsed.items.length > 0) {
+        return parsed.items.map((item) => ({
+          item: String(item.item ?? ""),
+          unitPrice: String(item.unitPrice ?? ""),
+          qty: String(item.qty ?? "1"),
+        }));
+      }
+    } catch {
+      // Old free-text specs are converted into a single editable line item.
+    }
+  }
+
+  return [
+    {
+      item: order.spec || "Item",
+      unitPrice: String(toNumber(order.amount) || ""),
+      qty: "1",
+    },
+  ];
+}
+
+function calculateItemsTotal(items: PurchaseOrderItem[]) {
+  return items.reduce(
+    (sum, item) => sum + toNumber(item.unitPrice) * (toNumber(item.qty) || 0),
+    0,
+  );
+}
+
 export function PurchasingManagement({
   vendors,
   projects,
   purchaseOrders,
   bills,
 }: PurchasingManagementProps) {
+  const [poFormKey, setPoFormKey] = useState(0);
   const [orderMode, setOrderMode] = useState<"closed" | "create" | "edit">(
     "closed",
   );
@@ -98,13 +148,14 @@ export function PurchasingManagement({
         actionLabel="PO 추가"
         onAdd={() => {
           setEditingOrder(null);
+          setPoFormKey((key) => key + 1);
           setOrderMode("create");
           closeBillForm();
         }}
       >
         {orderMode !== "closed" ? (
           <PurchaseOrderForm
-            key={editingOrder?.id ?? "new-po"}
+            key={editingOrder?.id ?? `new-po-${poFormKey}`}
             mode={orderMode === "edit" ? "edit" : "create"}
             vendors={vendors}
             projects={projects}
@@ -134,6 +185,7 @@ export function PurchasingManagement({
                 status={order.status}
                 onEdit={() => {
                   setEditingOrder(order);
+                  setPoFormKey((key) => key + 1);
                   setOrderMode("edit");
                   closeBillForm();
                 }}
@@ -214,6 +266,38 @@ function PurchaseOrderForm({
   onCancel: () => void;
   onSaved: () => void;
 }) {
+  const [items, setItems] = useState<PurchaseOrderItem[]>(
+    parsePurchaseOrderItems(order),
+  );
+  const itemsTotal = calculateItemsTotal(items);
+
+  function updateItem(
+    index: number,
+    key: keyof PurchaseOrderItem,
+    value: string,
+  ) {
+    setItems((currentItems) =>
+      currentItems.map((item, itemIndex) =>
+        itemIndex === index ? { ...item, [key]: value } : item,
+      ),
+    );
+  }
+
+  function addItem() {
+    setItems((currentItems) => [
+      ...currentItems,
+      { item: "", unitPrice: "", qty: "1" },
+    ]);
+  }
+
+  function removeItem(index: number) {
+    setItems((currentItems) =>
+      currentItems.length === 1
+        ? currentItems
+        : currentItems.filter((_, itemIndex) => itemIndex !== index),
+    );
+  }
+
   async function submit(formData: FormData) {
     if (mode === "edit") {
       await updatePurchaseOrderAction(formData);
@@ -235,9 +319,20 @@ function PurchaseOrderForm({
         <>
           <input type="hidden" name="purchase_order_id" value={order.id} />
           <input type="hidden" name="order_date" value={order.order_date} />
-          <input type="hidden" name="spec" value={order.spec ?? ""} />
         </>
       ) : null}
+      <input
+        type="hidden"
+        name="po_items_json"
+        value={JSON.stringify(
+          items.map((item) => ({
+            item: item.item,
+            unitPrice: toNumber(item.unitPrice),
+            qty: toNumber(item.qty) || 0,
+          })),
+        )}
+      />
+      <input type="hidden" name="amount" value={itemsTotal} />
 
       <div className="grid gap-3 md:grid-cols-2">
         <Field label="Project">
@@ -271,7 +366,7 @@ function PurchaseOrderForm({
           </select>
         </Field>
       </div>
-      <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_9rem_9rem]">
+      <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_9rem]">
         <Field label="PO Number">
           <input
             className="ui-input"
@@ -279,17 +374,6 @@ function PurchaseOrderForm({
             placeholder="PO-1001..."
             autoComplete="off"
             defaultValue={order?.po_number ?? ""}
-          />
-        </Field>
-        <Field label="Amount">
-          <input
-            className="ui-input"
-            name="amount"
-            type="number"
-            step="0.01"
-            placeholder="850.00"
-            inputMode="decimal"
-            defaultValue={order ? toNumber(order.amount) : ""}
           />
         </Field>
         <Field label="Status">
@@ -305,6 +389,101 @@ function PurchaseOrderForm({
           </select>
         </Field>
       </div>
+      <section className="space-y-3">
+        <div className="flex items-center justify-between gap-3">
+          <h3 className="ui-label">Items</h3>
+          <button
+            type="button"
+            className="inline-flex h-8 items-center border border-[var(--border-strong)] bg-white px-2.5 text-xs font-semibold text-[var(--foreground)] transition-colors hover:border-[var(--coral)] hover:bg-[var(--coral-quiet)] hover:text-[var(--coral-strong)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--coral)]"
+            onClick={addItem}
+          >
+            <Plus className="mr-1 h-3.5 w-3.5" aria-hidden="true" />
+            아이템 추가
+          </button>
+        </div>
+        <div className="overflow-x-auto border border-[var(--border)] bg-white">
+          <div className="min-w-[42rem]">
+            <div className="grid grid-cols-[minmax(0,1fr)_8rem_6rem_8rem_2.5rem] border-b border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs font-semibold uppercase tracking-[0.08em] text-[var(--muted)]">
+              <span>Item</span>
+              <span>Unit Price</span>
+              <span>Qty</span>
+              <span className="text-right">Total</span>
+              <span aria-hidden="true" />
+            </div>
+            <div className="divide-y divide-[var(--border)]">
+              {items.map((item, index) => {
+                const lineTotal =
+                  toNumber(item.unitPrice) * (toNumber(item.qty) || 0);
+
+                return (
+                  <div
+                    key={index}
+                    className="grid grid-cols-[minmax(0,1fr)_8rem_6rem_8rem_2.5rem] items-center gap-2 px-3 py-2"
+                  >
+                    <input
+                      className="ui-input min-h-9 px-2"
+                      value={item.item}
+                      placeholder="Business cards, banner..."
+                      aria-label={`PO item ${index + 1}`}
+                      onChange={(event) =>
+                        updateItem(index, "item", event.target.value)
+                      }
+                    />
+                    <input
+                      className="ui-input min-h-9 px-2"
+                      value={item.unitPrice}
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      placeholder="0.00"
+                      inputMode="decimal"
+                      aria-label={`PO item ${index + 1} unit price`}
+                      onChange={(event) =>
+                        updateItem(index, "unitPrice", event.target.value)
+                      }
+                    />
+                    <input
+                      className="ui-input min-h-9 px-2"
+                      value={item.qty}
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      placeholder="1"
+                      inputMode="decimal"
+                      aria-label={`PO item ${index + 1} quantity`}
+                      onChange={(event) =>
+                        updateItem(index, "qty", event.target.value)
+                      }
+                    />
+                    <p className="text-right text-sm font-semibold tabular-nums">
+                      {formatCurrency(lineTotal)}
+                    </p>
+                    <button
+                      type="button"
+                      className="inline-flex h-8 w-8 items-center justify-center border border-transparent text-[var(--muted)] transition-colors hover:border-[#d8c2bd] hover:bg-[#fff4f1] hover:text-[#8a2f1e] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#8a2f1e] disabled:pointer-events-none disabled:opacity-35"
+                      aria-label={`Remove PO item ${index + 1}`}
+                      disabled={items.length === 1}
+                      onClick={() => removeItem(index)}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="flex justify-end border-t border-[var(--border)] px-3 py-3">
+              <div className="min-w-48 text-right">
+                <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--muted)]">
+                  Total Amount
+                </p>
+                <p className="mt-1 text-xl font-semibold tabular-nums">
+                  {formatCurrency(itemsTotal)}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
       <Field label="Expected Date">
         <input
           className="ui-input"
