@@ -418,6 +418,21 @@ function formatClientPhone(phone: string | null) {
   return phone ? formatPhoneNumber(phone) : "no phone";
 }
 
+function DetailLine({
+  label,
+  value,
+}: {
+  label: string;
+  value: string | null | undefined;
+}) {
+  return (
+    <p className="break-words text-sm leading-6 text-[var(--muted)]">
+      <span className="font-semibold text-[var(--foreground)]">{label}:</span>{" "}
+      {value || "-"}
+    </p>
+  );
+}
+
 export function ClientManagement({
   clients,
 }: {
@@ -511,10 +526,17 @@ export function ClientManagement({
                       <h3 className="break-words font-semibold">
                         {client.company_name ?? client.name}
                       </h3>
-                      <p className="mt-1 break-words text-sm text-[var(--muted)]">
-                        {client.name} · {client.email ?? "no email"} ·{" "}
-                        {formatClientPhone(client.phone)}
-                      </p>
+                      <div className="mt-2 space-y-0.5">
+                        <DetailLine label="Contact" value={client.name} />
+                        <DetailLine label="Email" value={client.email} />
+                        <DetailLine
+                          label="Phone"
+                          value={formatClientPhone(client.phone)}
+                        />
+                        {client.address ? (
+                          <DetailLine label="Address" value={client.address} />
+                        ) : null}
+                      </div>
                     </div>
                     <button
                       type="button"
@@ -527,11 +549,6 @@ export function ClientManagement({
                       수정
                     </button>
                   </div>
-                  {client.address ? (
-                    <p className="mt-2 break-words text-sm text-[var(--muted)]">
-                      {client.address}
-                    </p>
-                  ) : null}
                   {client.memo ? (
                     <p className="mt-2 break-words text-sm text-[var(--muted)]">
                       {client.memo}
