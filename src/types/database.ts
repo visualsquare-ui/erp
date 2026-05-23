@@ -119,7 +119,7 @@ export type InvoiceRow = {
   paid_amount: string | number;
   paid_date: string | null;
   created_at: string;
-  clients?: Pick<ClientRow, "company_name" | "name"> | null;
+  clients?: Pick<ClientRow, "company_name" | "name" | "email" | "address"> | null;
   projects?: Pick<ProjectRow, "name"> | null;
 };
 

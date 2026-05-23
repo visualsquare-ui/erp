@@ -82,7 +82,10 @@ export async function getDashboardData() {
     supabase.from("projects").select("*, clients(company_name, name)").order("due_date"),
     supabase.from("tasks").select("*").order("due_date"),
     supabase.from("jobs").select("*, clients(company_name, name), projects(name, type)").order("due_date"),
-    supabase.from("invoices").select("*, clients(company_name, name), projects(name)").order("due_date"),
+    supabase
+      .from("invoices")
+      .select("*, clients(company_name, name, email, address), projects(name)")
+      .order("due_date"),
     supabase.from("vendor_bills").select("*, vendors(name), projects(name, type)").order("due_date"),
     supabase.from("assets").select("*, projects(name, type)").eq("is_portfolio", true).order("created_at"),
   ]);
@@ -234,7 +237,7 @@ export async function getInvoicesPageData() {
       .order("order_date", { ascending: false }),
     supabase
       .from("invoices")
-      .select("*, clients(company_name, name), projects(name), invoice_items(*)")
+      .select("*, clients(company_name, name, email, address), projects(name), invoice_items(*)")
       .order("issue_date", { ascending: false }),
   ]);
 

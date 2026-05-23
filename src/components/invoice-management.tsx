@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Pencil, Trash2 } from "lucide-react";
+import { Eye, Pencil, Send, Trash2, X } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 import {
   createInvoiceAction,
@@ -13,6 +14,7 @@ import { ListActionButton } from "@/components/list-action-button";
 import { StatusBadge } from "@/components/status-badge";
 import { toNumber } from "@/lib/erp-calculations";
 import { formatCurrency, formatUsDate } from "@/lib/format";
+import { buildInvoiceLineItems, getInvoiceRecipient } from "@/lib/invoice-document";
 import {
   buildInvoiceItemsFromPurchaseOrder,
   type InvoiceLineDraft,
@@ -104,10 +106,13 @@ export function InvoiceManagement({
   purchaseOrders,
   invoices,
 }: InvoiceManagementProps) {
+  const router = useRouter();
   const [formMode, setFormMode] = useState<"closed" | "create" | "edit">(
     "closed",
   );
   const [editingInvoice, setEditingInvoice] =
+    useState<InvoiceWithItems | null>(null);
+  const [previewInvoice, setPreviewInvoice] =
     useState<InvoiceWithItems | null>(null);
 
   function closeForm() {
@@ -180,11 +185,20 @@ export function InvoiceManagement({
                 setEditingInvoice(invoice);
                 setFormMode("edit");
               }}
+              onView={() => setPreviewInvoice(invoice)}
               onDelete={() => void deleteInvoice(invoice)}
             />
           ))
         )}
       </div>
+
+      {previewInvoice ? (
+        <InvoicePreviewModal
+          invoice={previewInvoice}
+          onClose={() => setPreviewInvoice(null)}
+          onSent={() => router.refresh()}
+        />
+      ) : null}
     </section>
   );
 }
@@ -615,10 +629,12 @@ function InvoiceForm({
 
 function InvoiceRowCard({
   invoice,
+  onView,
   onEdit,
   onDelete,
 }: {
   invoice: InvoiceWithItems;
+  onView: () => void;
   onEdit: () => void;
   onDelete: () => void;
 }) {
@@ -655,6 +671,12 @@ function InvoiceRowCard({
         </div>
         <div className="flex justify-end gap-1 border-t border-[var(--border)] pt-2 md:w-full">
           <ListActionButton
+            icon={<Eye className="h-3.5 w-3.5" aria-hidden="true" />}
+            onClick={onView}
+          >
+            View
+          </ListActionButton>
+          <ListActionButton
             icon={<Pencil className="h-3.5 w-3.5" aria-hidden="true" />}
             onClick={onEdit}
           >
@@ -670,6 +692,218 @@ function InvoiceRowCard({
         </div>
       </div>
     </article>
+  );
+}
+
+function InvoicePreviewModal({
+  invoice,
+  onClose,
+  onSent,
+}: {
+  invoice: InvoiceWithItems;
+  onClose: () => void;
+  onSent: () => void;
+}) {
+  const [isSending, setIsSending] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const recipient = getInvoiceRecipient(invoice);
+  const lineItems = buildInvoiceLineItems(invoice);
+  const canSend = Boolean(recipient.email);
+
+  async function sendInvoice() {
+    setIsSending(true);
+    setMessage(null);
+    setError(null);
+
+    try {
+      const response = await fetch(`/api/invoices/${invoice.id}/send`, {
+        method: "POST",
+      });
+      const body = (await response.json().catch(() => ({}))) as {
+        error?: string;
+      };
+
+      if (!response.ok) {
+        throw new Error(body.error ?? "Invoice 발송에 실패했습니다.");
+      }
+
+      setMessage("Invoice PDF를 이메일로 발송했습니다.");
+      onSent();
+    } catch (sendError) {
+      setError(
+        sendError instanceof Error
+          ? sendError.message
+          : "Invoice 발송에 실패했습니다.",
+      );
+    } finally {
+      setIsSending(false);
+    }
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-50 overflow-y-auto bg-black/35 px-4 py-6"
+      role="dialog"
+      aria-modal="true"
+      aria-label={`${invoice.invoice_number} preview`}
+    >
+      <div className="mx-auto max-w-4xl border border-[var(--border)] bg-white shadow-xl">
+        <div className="flex items-center justify-between gap-3 border-b border-[var(--border)] px-5 py-3">
+          <div>
+            <p className="ui-label text-[var(--coral)]">Invoice Preview</p>
+            <h2 className="text-lg font-semibold">{invoice.invoice_number}</h2>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              className="ui-button ui-button-secondary h-9 px-3"
+              onClick={onClose}
+            >
+              <X className="h-4 w-4" aria-hidden="true" />
+              닫기
+            </button>
+            <button
+              type="button"
+              className="ui-button h-9 px-3"
+              disabled={!canSend || isSending}
+              onClick={() => void sendInvoice()}
+            >
+              <Send className="h-4 w-4" aria-hidden="true" />
+              {isSending ? "Sending" : "Send"}
+            </button>
+          </div>
+        </div>
+
+        <div className="bg-[var(--surface)] p-4 sm:p-8">
+          <div className="mx-auto max-w-[46rem] border border-[var(--border)] bg-white">
+            <header className="grid gap-8 border-b border-[var(--border)] p-8 sm:grid-cols-[minmax(0,1fr)_16rem]">
+              <div>
+                <div className="font-serif text-4xl leading-[0.85] tracking-normal text-[var(--foreground)]">
+                  visual
+                  <br />
+                  <span className="text-[var(--coral)]">square</span>
+                </div>
+                <p className="mt-8 ui-label text-[var(--coral)]">Bill To</p>
+                <h3 className="mt-2 text-lg font-semibold">{recipient.name}</h3>
+                <div className="mt-2 space-y-1 text-sm text-[var(--muted)]">
+                  {recipient.email ? <p>{recipient.email}</p> : null}
+                  {recipient.address ? <p>{recipient.address}</p> : null}
+                </div>
+              </div>
+              <div className="space-y-4 sm:text-right">
+                <div>
+                  <p className="ui-label text-[var(--coral)]">Invoice</p>
+                  <h1 className="mt-2 break-words text-3xl font-semibold">
+                    {invoice.invoice_number}
+                  </h1>
+                </div>
+                <dl className="space-y-2 text-sm">
+                  <div className="flex justify-between gap-4 sm:justify-end">
+                    <dt className="text-[var(--muted)]">Issue</dt>
+                    <dd className="font-semibold">
+                      {formatUsDate(invoice.issue_date)}
+                    </dd>
+                  </div>
+                  <div className="flex justify-between gap-4 sm:justify-end">
+                    <dt className="text-[var(--muted)]">Due</dt>
+                    <dd className="font-semibold">
+                      {formatUsDate(invoice.due_date)}
+                    </dd>
+                  </div>
+                  <div className="flex justify-between gap-4 sm:justify-end">
+                    <dt className="text-[var(--muted)]">Project</dt>
+                    <dd className="font-semibold">
+                      {invoice.projects?.name ?? "-"}
+                    </dd>
+                  </div>
+                </dl>
+              </div>
+            </header>
+
+            <div className="p-8">
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[34rem] border-collapse text-sm">
+                  <thead>
+                    <tr className="border-y border-[var(--border)] bg-[var(--surface)] text-left ui-label">
+                      <th className="px-3 py-2 font-semibold">Description</th>
+                      <th className="px-3 py-2 text-right font-semibold">Qty</th>
+                      <th className="px-3 py-2 text-right font-semibold">Unit</th>
+                      <th className="px-3 py-2 text-right font-semibold">
+                        Amount
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[var(--border)]">
+                    {lineItems.map((item, index) => (
+                      <tr key={`${item.description}-${index}`}>
+                        <td className="px-3 py-3">{item.description}</td>
+                        <td className="px-3 py-3 text-right tabular-nums">
+                          {item.quantity}
+                        </td>
+                        <td className="px-3 py-3 text-right tabular-nums">
+                          {formatCurrency(item.unitPrice)}
+                        </td>
+                        <td className="px-3 py-3 text-right font-semibold tabular-nums">
+                          {formatCurrency(item.amount)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="mt-8 flex justify-end">
+                <dl className="w-full max-w-xs space-y-2 text-sm tabular-nums">
+                  <div className="flex justify-between gap-4">
+                    <dt className="text-[var(--muted)]">Subtotal</dt>
+                    <dd className="font-semibold">
+                      {formatCurrency(toNumber(invoice.subtotal))}
+                    </dd>
+                  </div>
+                  <div className="flex justify-between gap-4">
+                    <dt className="text-[var(--muted)]">Tax</dt>
+                    <dd className="font-semibold">
+                      {formatCurrency(toNumber(invoice.tax))}
+                    </dd>
+                  </div>
+                  <div className="flex justify-between gap-4 border-t border-[var(--border)] pt-3 text-base">
+                    <dt>Total</dt>
+                    <dd className="font-semibold">
+                      {formatCurrency(toNumber(invoice.total))}
+                    </dd>
+                  </div>
+                </dl>
+              </div>
+
+              <footer className="mt-10 border-t border-[var(--border)] pt-5 text-sm text-[var(--muted)]">
+                Thank you for your business.
+              </footer>
+            </div>
+            <div className="h-1.5 bg-[var(--coral)]" />
+          </div>
+
+          <div className="mx-auto mt-4 max-w-[46rem] space-y-2 text-sm">
+            {!canSend ? (
+              <p className="border border-[#d8c2bd] bg-[#fff4f1] px-3 py-2 text-[#8a2f1e]">
+                고객 이메일이 없어 발송할 수 없습니다. 고객 정보에 이메일을 먼저
+                입력해 주세요.
+              </p>
+            ) : null}
+            {message ? (
+              <p className="border border-[#bed8ca] bg-[#f1fbf5] px-3 py-2 text-[#256340]">
+                {message}
+              </p>
+            ) : null}
+            {error ? (
+              <p className="border border-[#d8c2bd] bg-[#fff4f1] px-3 py-2 text-[#8a2f1e]">
+                {error}
+              </p>
+            ) : null}
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 
