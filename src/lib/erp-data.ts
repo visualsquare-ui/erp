@@ -80,12 +80,31 @@ export async function getDashboardData() {
 
 export async function getClientsPageData() {
   const { user, supabase } = await getAuthedSupabase("/clients");
-  const { data } = await supabase
-    .from("clients")
-    .select("*, projects(id, quote_amount), invoices(id, total, paid_amount, status)")
-    .order("company_name", { ascending: true });
+  const [clientsResult, jobsResult, invoicesResult, purchaseOrdersResult] =
+    await Promise.all([
+      supabase
+        .from("clients")
+        .select("*")
+        .order("company_name", { ascending: true }),
+      supabase.from("jobs").select("*").order("due_date", { ascending: false }),
+      supabase
+        .from("invoices")
+        .select("*, invoice_items(*)")
+        .order("issue_date", { ascending: false }),
+      supabase.from("purchase_orders").select("*").order("order_date", {
+        ascending: false,
+      }),
+    ]);
 
-  return { user, clients: (data ?? []) as (ClientRow & { projects: ProjectRow[]; invoices: InvoiceRow[] })[] };
+  return {
+    user,
+    clients: (clientsResult.data ?? []) as ClientRow[],
+    jobs: (jobsResult.data ?? []) as JobRow[],
+    invoices: (invoicesResult.data ?? []) as (InvoiceRow & {
+      invoice_items: InvoiceItemRow[];
+    })[],
+    purchaseOrders: (purchaseOrdersResult.data ?? []) as PurchaseOrderRow[],
+  };
 }
 
 export async function getJobsPageData() {

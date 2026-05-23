@@ -1,16 +1,25 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Pencil, Trash2 } from "lucide-react";
+import { ChevronDown, Pencil, Search, Trash2 } from "lucide-react";
 
 import {
   createClientAction,
   deleteClientAction,
   updateClientAction,
 } from "@/app/actions";
-import { calculateOutstandingAr, toNumber } from "@/lib/erp-calculations";
-import { formatCurrency } from "@/lib/format";
-import type { ClientRow, InvoiceRow, ProjectRow } from "@/types/database";
+import {
+  filterClientsByQuery,
+  summarizeRecentClientJobs,
+} from "@/lib/client-jobs";
+import { formatCurrency, formatUsDate } from "@/lib/format";
+import type {
+  ClientRow,
+  InvoiceItemRow,
+  InvoiceRow,
+  JobRow,
+  PurchaseOrderRow,
+} from "@/types/database";
 
 type AddressSuggestion = {
   label: string;
@@ -24,9 +33,8 @@ type AddressSuggestionsResponse = {
   suggestions: AddressSuggestion[];
 };
 
-type ClientWithRelations = ClientRow & {
-  projects: ProjectRow[];
-  invoices: InvoiceRow[];
+type InvoiceWithItems = InvoiceRow & {
+  invoice_items: InvoiceItemRow[];
 };
 
 type AddressParts = {
@@ -466,17 +474,34 @@ function ClientActionButton({
   );
 }
 
+function formatJobDate(value: string | null) {
+  return value ? formatUsDate(value.slice(0, 10)) : "-";
+}
+
+function formatMarginRate(value: number) {
+  return `${Math.round(value * 100)}%`;
+}
+
 export function ClientManagement({
   clients,
+  jobs,
+  invoices,
+  purchaseOrders,
 }: {
-  clients: ClientWithRelations[];
+  clients: ClientRow[];
+  jobs: JobRow[];
+  invoices: InvoiceWithItems[];
+  purchaseOrders: PurchaseOrderRow[];
 }) {
   const [formMode, setFormMode] = useState<"closed" | "create" | "edit">(
     "closed",
   );
-  const [editingClient, setEditingClient] = useState<ClientWithRelations | null>(
+  const [editingClient, setEditingClient] = useState<ClientRow | null>(
     null,
   );
+  const [searchQuery, setSearchQuery] = useState("");
+  const [expandedClientId, setExpandedClientId] = useState<string | null>(null);
+  const filteredClients = filterClientsByQuery(clients, searchQuery);
 
   function closeForm() {
     setFormMode("closed");
@@ -485,7 +510,7 @@ export function ClientManagement({
 
   async function deleteClient(clientId: string) {
     const confirmed = window.confirm(
-      "이 고객을 삭제할까요? 연결된 프로젝트가 있으면 삭제되지 않을 수 있습니다.",
+      "이 고객을 삭제할까요? 연결된 Job이 있으면 삭제되지 않을 수 있습니다.",
     );
 
     if (!confirmed) {
@@ -504,7 +529,7 @@ export function ClientManagement({
         <div>
           <h2 className="text-lg font-semibold">고객 목록</h2>
           <p className="mt-1 text-sm text-[var(--muted)]">
-            기존 고객을 먼저 확인하고 필요할 때 추가하거나 수정합니다.
+            검색 후 고객을 열어 최근 Job 수익성을 확인합니다.
           </p>
         </div>
         <button
@@ -541,6 +566,20 @@ export function ClientManagement({
         />
       ) : null}
 
+      <div className="relative">
+        <Search
+          className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--muted)]"
+          aria-hidden="true"
+        />
+        <input
+          className="ui-input pl-9"
+          type="search"
+          placeholder="Search clients by company, contact, email, phone, address..."
+          value={searchQuery}
+          onChange={(event) => setSearchQuery(event.target.value)}
+        />
+      </div>
+
       <div className="ui-card overflow-hidden">
         {clients.length === 0 ? (
           <div className="border border-dashed border-[var(--border-strong)] bg-[var(--surface)] px-4 py-8 text-center">
@@ -549,86 +588,180 @@ export function ClientManagement({
               고객 추가를 눌러 첫 고객을 등록하세요.
             </p>
           </div>
+        ) : filteredClients.length === 0 ? (
+          <div className="border border-dashed border-[var(--border-strong)] bg-[var(--surface)] px-4 py-8 text-center">
+            <p className="font-semibold">검색 결과 없음</p>
+            <p className="mt-2 text-sm text-[var(--muted)]">
+              다른 이름, 이메일, 전화번호로 검색해 보세요.
+            </p>
+          </div>
         ) : (
-          clients.map((client) => {
-            const revenue = client.invoices.reduce(
-              (sum, invoice) => sum + toNumber(invoice.total),
-              0,
-            );
-            const outstanding = calculateOutstandingAr(
-              client.invoices.map((invoice) => ({
-                total: toNumber(invoice.total),
-                paidAmount: toNumber(invoice.paid_amount),
-                status: invoice.status,
-              })),
-            );
+          filteredClients.map((client) => {
+            const clientJobs = jobs.filter((job) => job.client_id === client.id);
+            const recentJobs = summarizeRecentClientJobs({
+              clientId: client.id,
+              jobs,
+              invoices,
+              purchaseOrders,
+            });
+            const isExpanded = expandedClientId === client.id;
 
             return (
               <article
                 key={client.id}
-                className="grid gap-4 border-b border-[var(--border)] p-5 last:border-b-0 md:grid-cols-[minmax(0,1fr)_10rem]"
+                className="border-b border-[var(--border)] last:border-b-0"
               >
-                <div className="min-w-0">
-                  <h3 className="break-words font-semibold">
-                    {client.company_name ?? client.name}
-                  </h3>
-                  <div className="mt-2 space-y-0.5">
-                    <DetailLine label="Contact" value={client.name} />
-                    <DetailLine label="Email" value={client.email} />
-                    <DetailLine
-                      label="Phone"
-                      value={formatClientPhone(client.phone)}
-                    />
-                    {client.address ? (
-                      <DetailLine label="Address" value={client.address} />
+                <button
+                  type="button"
+                  className="grid w-full gap-4 p-5 text-left transition-colors hover:bg-[var(--surface)] focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--coral)] md:grid-cols-[minmax(0,1fr)_10rem]"
+                  aria-expanded={isExpanded}
+                  onClick={() =>
+                    setExpandedClientId(isExpanded ? null : client.id)
+                  }
+                >
+                  <div className="min-w-0">
+                    <div className="flex min-w-0 items-center gap-2">
+                      <ChevronDown
+                        className={`h-4 w-4 shrink-0 text-[var(--muted)] transition-transform ${
+                          isExpanded ? "rotate-180" : ""
+                        }`}
+                        aria-hidden="true"
+                      />
+                      <h3 className="break-words font-semibold">
+                        {client.company_name ?? client.name}
+                      </h3>
+                    </div>
+                    <div className="mt-2 space-y-0.5 pl-6">
+                      <DetailLine label="Contact" value={client.name} />
+                      <DetailLine label="Email" value={client.email} />
+                      <DetailLine
+                        label="Phone"
+                        value={formatClientPhone(client.phone)}
+                      />
+                      {client.address ? (
+                        <DetailLine label="Address" value={client.address} />
+                      ) : null}
+                    </div>
+                    {client.memo ? (
+                      <p className="mt-2 break-words pl-6 text-sm text-[var(--muted)]">
+                        {client.memo}
+                      </p>
                     ) : null}
                   </div>
-                  {client.memo ? (
-                    <p className="mt-2 break-words text-sm text-[var(--muted)]">
-                      {client.memo}
-                    </p>
-                  ) : null}
-                </div>
-                <div className="flex flex-col gap-4 md:items-end md:justify-between">
-                  <div className="grid w-full grid-cols-3 gap-2 text-sm md:w-auto md:min-w-28 md:grid-cols-1 md:gap-3">
-                    <div>
-                      <p className="text-xs text-[var(--muted)]">Projects</p>
-                      <p className="font-semibold tabular-nums">
-                        {client.projects.length}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-[var(--muted)]">Revenue</p>
-                      <p className="font-semibold tabular-nums">
-                        {formatCurrency(revenue)}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-[var(--muted)]">AR</p>
-                      <p className="font-semibold tabular-nums">
-                        {formatCurrency(outstanding)}
-                      </p>
+                  <div className="flex flex-col gap-4 md:items-end md:justify-between">
+                    <div className="grid w-full grid-cols-2 gap-2 text-sm md:w-auto md:min-w-28 md:grid-cols-1 md:gap-3">
+                      <div>
+                        <p className="text-xs text-[var(--muted)]">Jobs</p>
+                        <p className="font-semibold tabular-nums">
+                          {clientJobs.length}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-[var(--muted)]">Recent</p>
+                        <p className="font-semibold tabular-nums">
+                          {recentJobs.length}
+                        </p>
+                      </div>
                     </div>
                   </div>
-                  <div className="flex justify-end gap-1 border-t border-[var(--border)] pt-2 md:w-full">
-                    <ClientActionButton
-                      icon={<Pencil className="h-3.5 w-3.5" aria-hidden="true" />}
-                      onClick={() => {
-                        setEditingClient(client);
-                        setFormMode("edit");
-                      }}
-                    >
-                      수정
-                    </ClientActionButton>
-                    <ClientActionButton
-                      icon={<Trash2 className="h-3.5 w-3.5" aria-hidden="true" />}
-                      tone="danger"
-                      onClick={() => void deleteClient(client.id)}
-                    >
-                      삭제
-                    </ClientActionButton>
+                </button>
+
+                {isExpanded ? (
+                  <div className="border-t border-[var(--border)] bg-[var(--surface)] px-5 py-4">
+                    <div className="mb-3 flex flex-col justify-between gap-2 sm:flex-row sm:items-center">
+                      <div>
+                        <h4 className="text-sm font-semibold">
+                          최근 Job List
+                        </h4>
+                        <p className="mt-1 text-xs text-[var(--muted)]">
+                          최근 5개 Job 기준으로 견적, 코스트, 세일즈, 수익을
+                          표시합니다.
+                        </p>
+                      </div>
+                      <div className="flex gap-1">
+                        <ClientActionButton
+                          icon={
+                            <Pencil
+                              className="h-3.5 w-3.5"
+                              aria-hidden="true"
+                            />
+                          }
+                          onClick={() => {
+                            setEditingClient(client);
+                            setFormMode("edit");
+                          }}
+                        >
+                          수정
+                        </ClientActionButton>
+                        <ClientActionButton
+                          icon={
+                            <Trash2
+                              className="h-3.5 w-3.5"
+                              aria-hidden="true"
+                            />
+                          }
+                          tone="danger"
+                          onClick={() => void deleteClient(client.id)}
+                        >
+                          삭제
+                        </ClientActionButton>
+                      </div>
+                    </div>
+
+                    {recentJobs.length === 0 ? (
+                      <div className="border border-dashed border-[var(--border-strong)] bg-white px-4 py-6 text-center">
+                        <p className="font-semibold">최근 Job 없음</p>
+                        <p className="mt-2 text-sm text-[var(--muted)]">
+                          이 고객에게 Job이 생기면 여기에 표시됩니다.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="overflow-x-auto border border-[var(--border)] bg-white">
+                        <table className="ui-table min-w-[760px]">
+                          <thead>
+                            <tr>
+                              <th>Job</th>
+                              <th>날짜</th>
+                              <th className="text-right">견적</th>
+                              <th className="text-right">Cost</th>
+                              <th className="text-right">Sales</th>
+                              <th className="text-right">Profit</th>
+                              <th className="text-right">Margin</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {recentJobs.map((job) => (
+                              <tr
+                                key={job.id}
+                                className="border-b border-[var(--border)]"
+                              >
+                                <td className="font-semibold">{job.name}</td>
+                                <td className="tabular-nums">
+                                  {formatJobDate(job.date)}
+                                </td>
+                                <td className="text-right tabular-nums">
+                                  {formatCurrency(job.quote)}
+                                </td>
+                                <td className="text-right tabular-nums">
+                                  {formatCurrency(job.cost)}
+                                </td>
+                                <td className="text-right tabular-nums">
+                                  {formatCurrency(job.sales)}
+                                </td>
+                                <td className="text-right font-semibold tabular-nums">
+                                  {formatCurrency(job.profit)}
+                                </td>
+                                <td className="text-right tabular-nums">
+                                  {formatMarginRate(job.marginRate)}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
                   </div>
-                </div>
+                ) : null}
               </article>
             );
           })
