@@ -17,6 +17,10 @@ import { ListActionButton } from "@/components/list-action-button";
 import { toNumber } from "@/lib/erp-calculations";
 import { formatCurrency, formatUsDate } from "@/lib/format";
 import { createClient as createBrowserSupabaseClient } from "@/lib/supabase/client";
+import {
+  getVendorBillUploadContentType,
+  isAllowedVendorBillFile,
+} from "@/lib/vendor-bill-files";
 import type {
   ClientRow,
   JobRow,
@@ -45,14 +49,6 @@ type PurchaseOrderItem = {
 };
 
 const VENDOR_BILL_BUCKET = "vendor-bills";
-
-function isVendorBillFile(file: File) {
-  return (
-    file.type === "application/pdf" ||
-    file.type === "image/jpeg" ||
-    /\.(pdf|jpe?g)$/i.test(file.name)
-  );
-}
 
 function buildVendorBillFilePath(file: File) {
   const safeName =
@@ -770,7 +766,9 @@ function VendorBillForm({
   async function uploadBillFile(file: File) {
     setUploadError("");
 
-    if (!isVendorBillFile(file)) {
+    const contentType = getVendorBillUploadContentType(file);
+
+    if (!isAllowedVendorBillFile(file) || !contentType) {
       setUploadError("PDF 또는 JPG 파일만 첨부할 수 있습니다.");
       return;
     }
@@ -781,7 +779,7 @@ function VendorBillForm({
     const { error } = await supabase.storage
       .from(VENDOR_BILL_BUCKET)
       .upload(path, file, {
-        contentType: file.type || undefined,
+        contentType,
         upsert: false,
       });
 
@@ -789,7 +787,7 @@ function VendorBillForm({
 
     if (error) {
       setUploadError(
-        "업로드에 실패했습니다. Supabase Storage bucket과 policy가 적용됐는지 확인해 주세요.",
+        `업로드에 실패했습니다. ${error.message} Storage SQL이 적용됐는지 확인해 주세요.`,
       );
       return;
     }
