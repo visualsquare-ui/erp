@@ -389,21 +389,21 @@ function PurchaseOrderForm({
           </select>
         </Field>
       </div>
-      <section className="space-y-3">
-        <div className="flex items-center justify-between gap-3">
+      <section className="space-y-2">
+        <div className="flex items-center justify-between gap-3 border-b border-[var(--border)] pb-2">
           <h3 className="ui-label">Items</h3>
           <button
             type="button"
-            className="inline-flex h-8 items-center border border-[var(--border-strong)] bg-white px-2.5 text-xs font-semibold text-[var(--foreground)] transition-colors hover:border-[var(--coral)] hover:bg-[var(--coral-quiet)] hover:text-[var(--coral-strong)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--coral)]"
+            className="inline-flex h-7 items-center gap-1 border border-transparent px-2 text-xs font-semibold text-[var(--muted)] transition-colors hover:border-[var(--border-strong)] hover:bg-white hover:text-[var(--foreground)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--coral)]"
             onClick={addItem}
           >
-            <Plus className="mr-1 h-3.5 w-3.5" aria-hidden="true" />
-            아이템 추가
+            <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+            Add item
           </button>
         </div>
         <div className="overflow-x-auto border border-[var(--border)] bg-white">
-          <div className="min-w-[42rem]">
-            <div className="grid grid-cols-[minmax(0,1fr)_8rem_6rem_8rem_2.5rem] border-b border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs font-semibold uppercase tracking-[0.08em] text-[var(--muted)]">
+          <div className="min-w-[36rem]">
+            <div className="grid h-8 grid-cols-[minmax(0,1fr)_7rem_4.5rem_7rem_2rem] items-center gap-2 border-b border-[var(--border)] px-2 text-[0.68rem] font-semibold uppercase tracking-[0.08em] text-[var(--muted)]">
               <span>Item</span>
               <span>Unit Price</span>
               <span>Qty</span>
@@ -418,19 +418,19 @@ function PurchaseOrderForm({
                 return (
                   <div
                     key={index}
-                    className="grid grid-cols-[minmax(0,1fr)_8rem_6rem_8rem_2.5rem] items-center gap-2 px-3 py-2"
+                    className="grid grid-cols-[minmax(0,1fr)_7rem_4.5rem_7rem_2rem] items-center gap-2 px-2 py-1.5"
                   >
                     <input
-                      className="ui-input min-h-9 px-2"
+                      className="ui-input min-h-8 border-transparent px-2 text-sm hover:border-[var(--border)] focus-visible:border-[var(--coral)]"
                       value={item.item}
-                      placeholder="Business cards, banner..."
+                      placeholder="Business cards, banner…"
                       aria-label={`PO item ${index + 1}`}
                       onChange={(event) =>
                         updateItem(index, "item", event.target.value)
                       }
                     />
                     <input
-                      className="ui-input min-h-9 px-2"
+                      className="ui-input min-h-8 border-transparent px-2 text-sm tabular-nums hover:border-[var(--border)] focus-visible:border-[var(--coral)]"
                       value={item.unitPrice}
                       type="number"
                       step="0.01"
@@ -443,7 +443,7 @@ function PurchaseOrderForm({
                       }
                     />
                     <input
-                      className="ui-input min-h-9 px-2"
+                      className="ui-input min-h-8 border-transparent px-2 text-sm tabular-nums hover:border-[var(--border)] focus-visible:border-[var(--coral)]"
                       value={item.qty}
                       type="number"
                       step="0.01"
@@ -455,12 +455,12 @@ function PurchaseOrderForm({
                         updateItem(index, "qty", event.target.value)
                       }
                     />
-                    <p className="text-right text-sm font-semibold tabular-nums">
+                    <p className="text-right text-sm font-semibold tabular-nums text-[var(--foreground)]">
                       {formatCurrency(lineTotal)}
                     </p>
                     <button
                       type="button"
-                      className="inline-flex h-8 w-8 items-center justify-center border border-transparent text-[var(--muted)] transition-colors hover:border-[#d8c2bd] hover:bg-[#fff4f1] hover:text-[#8a2f1e] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#8a2f1e] disabled:pointer-events-none disabled:opacity-35"
+                      className="inline-flex h-7 w-7 items-center justify-center border border-transparent text-[var(--muted)] transition-colors hover:border-[#d8c2bd] hover:bg-[#fff4f1] hover:text-[#8a2f1e] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#8a2f1e] disabled:pointer-events-none disabled:opacity-35"
                       aria-label={`Remove PO item ${index + 1}`}
                       disabled={items.length === 1}
                       onClick={() => removeItem(index)}
@@ -471,12 +471,12 @@ function PurchaseOrderForm({
                 );
               })}
             </div>
-            <div className="flex justify-end border-t border-[var(--border)] px-3 py-3">
-              <div className="min-w-48 text-right">
+            <div className="flex justify-end border-t border-[var(--border)] bg-[var(--surface)] px-2 py-2">
+              <div className="flex min-w-56 items-center justify-between gap-6">
                 <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--muted)]">
                   Total Amount
                 </p>
-                <p className="mt-1 text-xl font-semibold tabular-nums">
+                <p className="text-base font-semibold tabular-nums">
                   {formatCurrency(itemsTotal)}
                 </p>
               </div>
