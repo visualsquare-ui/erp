@@ -204,6 +204,52 @@ export async function createPurchaseOrderAction(formData: FormData) {
   revalidatePath("/");
 }
 
+export async function updatePurchaseOrderAction(formData: FormData) {
+  const orderId = text(formData, "purchase_order_id");
+  const projectId = String(formData.get("project_id"));
+
+  if (!orderId) {
+    return;
+  }
+
+  const { supabase } = await getAuthedSupabase("/purchasing");
+  await supabase
+    .from("purchase_orders")
+    .update({
+      project_id: projectId,
+      vendor_id: text(formData, "vendor_id"),
+      po_number: text(formData, "po_number") ?? `PO-${Date.now()}`,
+      order_date: text(formData, "order_date") ?? todayIso(),
+      expected_date: text(formData, "expected_date"),
+      spec: text(formData, "spec"),
+      amount: money(formData, "amount"),
+      status: text(formData, "status") ?? "ordered",
+    })
+    .eq("id", orderId);
+
+  revalidatePath("/purchasing");
+  revalidatePath(`/projects/${projectId}`);
+  revalidatePath("/");
+}
+
+export async function deletePurchaseOrderAction(formData: FormData) {
+  const orderId = text(formData, "purchase_order_id");
+  const projectId = text(formData, "project_id");
+
+  if (!orderId) {
+    return;
+  }
+
+  const { supabase } = await getAuthedSupabase("/purchasing");
+  await supabase.from("purchase_orders").delete().eq("id", orderId);
+
+  revalidatePath("/purchasing");
+  if (projectId) {
+    revalidatePath(`/projects/${projectId}`);
+  }
+  revalidatePath("/");
+}
+
 export async function createVendorBillAction(formData: FormData) {
   const projectId = String(formData.get("project_id"));
   const returnPath = text(formData, "return_path") ?? "/purchasing";
@@ -222,6 +268,54 @@ export async function createVendorBillAction(formData: FormData) {
   });
   revalidatePath("/purchasing");
   revalidatePath(`/projects/${projectId}`);
+  revalidatePath("/");
+}
+
+export async function updateVendorBillAction(formData: FormData) {
+  const billId = text(formData, "vendor_bill_id");
+  const projectId = String(formData.get("project_id"));
+
+  if (!billId) {
+    return;
+  }
+
+  const { supabase } = await getAuthedSupabase("/purchasing");
+  await supabase
+    .from("vendor_bills")
+    .update({
+      project_id: projectId,
+      vendor_id: text(formData, "vendor_id"),
+      purchase_order_id: text(formData, "purchase_order_id"),
+      bill_number: text(formData, "bill_number"),
+      received_date: text(formData, "received_date") ?? todayIso(),
+      due_date: text(formData, "due_date"),
+      amount: money(formData, "amount"),
+      status: text(formData, "status") ?? "received",
+      paid_date: text(formData, "paid_date"),
+      file_url: text(formData, "file_url"),
+    })
+    .eq("id", billId);
+
+  revalidatePath("/purchasing");
+  revalidatePath(`/projects/${projectId}`);
+  revalidatePath("/");
+}
+
+export async function deleteVendorBillAction(formData: FormData) {
+  const billId = text(formData, "vendor_bill_id");
+  const projectId = text(formData, "project_id");
+
+  if (!billId) {
+    return;
+  }
+
+  const { supabase } = await getAuthedSupabase("/purchasing");
+  await supabase.from("vendor_bills").delete().eq("id", billId);
+
+  revalidatePath("/purchasing");
+  if (projectId) {
+    revalidatePath(`/projects/${projectId}`);
+  }
   revalidatePath("/");
 }
 
