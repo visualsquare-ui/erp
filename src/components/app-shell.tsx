@@ -6,6 +6,7 @@ import {
   GalleryHorizontalEnd,
   LayoutDashboard,
   ReceiptText,
+  Truck,
   UsersRound,
 } from "lucide-react";
 
@@ -16,9 +17,10 @@ import logo from "../../assets/vs-logo-transparent.png";
 const navItems = [
   { label: "대시보드", href: "/", icon: LayoutDashboard },
   { label: "고객", href: "/clients", icon: UsersRound },
+  { label: "벤더", href: "/vendors", icon: Truck },
   { label: "프로젝트", href: "/projects", icon: BriefcaseBusiness },
-  { label: "인보이스", href: "/invoices", icon: FileText },
-  { label: "발주·빌", href: "/purchasing", icon: ReceiptText },
+  { label: "Invoice", href: "/invoices", icon: FileText },
+  { label: "PO / Bill", href: "/purchasing", icon: ReceiptText },
   { label: "포트폴리오", href: "/portfolio", icon: GalleryHorizontalEnd },
 ];
 

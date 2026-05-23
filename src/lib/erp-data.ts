@@ -153,7 +153,8 @@ export async function getInvoicesPageData() {
 
 export async function getPurchasingPageData() {
   const { user, supabase } = await getAuthedSupabase("/purchasing");
-  const [vendorsResult, projectsResult, ordersResult, billsResult] = await Promise.all([
+  const [vendorsResult, projectsResult, ordersResult, billsResult] =
+    await Promise.all([
     supabase.from("vendors").select("*").order("name"),
     supabase.from("projects").select("*, clients(company_name, name)").order("name"),
     supabase.from("purchase_orders").select("*, vendors(name), projects(name, type)").order("order_date", { ascending: false }),
@@ -166,6 +167,22 @@ export async function getPurchasingPageData() {
     projects: (projectsResult.data ?? []) as ProjectRow[],
     purchaseOrders: (ordersResult.data ?? []) as PurchaseOrderRow[],
     bills: (billsResult.data ?? []) as VendorBillRow[],
+  };
+}
+
+export async function getVendorsPageData() {
+  const { user, supabase } = await getAuthedSupabase("/vendors");
+  const { data } = await supabase
+    .from("vendors")
+    .select("*, purchase_orders(id, amount), vendor_bills(id, amount, status)")
+    .order("name", { ascending: true });
+
+  return {
+    user,
+    vendors: (data ?? []) as (VendorRow & {
+      purchase_orders: PurchaseOrderRow[];
+      vendor_bills: VendorBillRow[];
+    })[],
   };
 }
 

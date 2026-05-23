@@ -13,8 +13,8 @@ export default async function PurchasingPage() {
     <AppShell userEmail={user.email ?? "Staff"} activePath="/purchasing">
       <PageHeader
         eyebrow="AP"
-        title="발주·빌"
-        description="인쇄소 발주와 받은 빌을 연결해 줄 돈을 추적합니다."
+        title="PO / Bill"
+        description="인쇄소 발주와 공급사 빌을 분리해 AP 흐름을 추적합니다."
       />
 
       <PurchasingManagement

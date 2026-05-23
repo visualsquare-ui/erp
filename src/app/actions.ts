@@ -183,6 +183,45 @@ export async function createVendorAction(formData: FormData) {
     memo: text(formData, "memo"),
   });
   revalidatePath("/purchasing");
+  revalidatePath("/vendors");
+}
+
+export async function updateVendorAction(formData: FormData) {
+  const vendorId = text(formData, "vendor_id");
+
+  if (!vendorId) {
+    return;
+  }
+
+  const { supabase } = await getAuthedSupabase("/vendors");
+  await supabase
+    .from("vendors")
+    .update({
+      name: text(formData, "name") ?? "New vendor",
+      contact_person: text(formData, "contact_person"),
+      email: text(formData, "email"),
+      phone: text(formData, "phone"),
+      specialty: text(formData, "specialty"),
+      memo: text(formData, "memo"),
+    })
+    .eq("id", vendorId);
+
+  revalidatePath("/vendors");
+  revalidatePath("/purchasing");
+}
+
+export async function deleteVendorAction(formData: FormData) {
+  const vendorId = text(formData, "vendor_id");
+
+  if (!vendorId) {
+    return;
+  }
+
+  const { supabase } = await getAuthedSupabase("/vendors");
+  await supabase.from("vendors").delete().eq("id", vendorId);
+
+  revalidatePath("/vendors");
+  revalidatePath("/purchasing");
 }
 
 export async function createPurchaseOrderAction(formData: FormData) {
@@ -372,5 +411,85 @@ export async function createInvoiceAction(formData: FormData) {
 
   revalidatePath("/invoices");
   revalidatePath(`/projects/${projectId}`);
+  revalidatePath("/");
+}
+
+export async function updateInvoiceAction(formData: FormData) {
+  const invoiceId = text(formData, "invoice_id");
+  const invoiceItemId = text(formData, "invoice_item_id");
+  const projectId = String(formData.get("project_id"));
+  const issueDate = text(formData, "issue_date") ?? todayIso();
+  const terms = (text(formData, "terms") ?? "net_30") as PaymentTerms;
+  const quantity = toNumber(text(formData, "quantity")) || 1;
+  const unitPrice = money(formData, "unit_price");
+  const isTaxable = checkbox(formData, "is_taxable");
+  const taxRate = toNumber(text(formData, "tax_rate"));
+  const draft = calculateInvoiceDraft([
+    { quantity, unitPrice, isTaxable, taxRate },
+  ]);
+
+  if (!invoiceId) {
+    return;
+  }
+
+  const { supabase } = await getAuthedSupabase("/invoices");
+  await supabase
+    .from("invoices")
+    .update({
+      project_id: projectId,
+      client_id: text(formData, "client_id"),
+      invoice_number: text(formData, "invoice_number") ?? `VS-${Date.now()}`,
+      issue_date: issueDate,
+      terms,
+      due_date:
+        text(formData, "due_date") ?? addPaymentTermDays(issueDate, terms),
+      status: text(formData, "status") ?? "draft",
+      subtotal: draft.subtotal,
+      tax: draft.tax,
+      total: draft.total,
+      paid_amount: money(formData, "paid_amount"),
+      paid_date: text(formData, "paid_date"),
+    })
+    .eq("id", invoiceId);
+
+  const itemPayload = {
+    invoice_id: invoiceId,
+    description: text(formData, "description") ?? "Design service",
+    quantity,
+    unit_price: unitPrice,
+    amount: draft.subtotal,
+    is_taxable: isTaxable,
+    tax_rate: taxRate,
+  };
+
+  if (invoiceItemId) {
+    await supabase
+      .from("invoice_items")
+      .update(itemPayload)
+      .eq("id", invoiceItemId);
+  } else {
+    await supabase.from("invoice_items").insert(itemPayload);
+  }
+
+  revalidatePath("/invoices");
+  revalidatePath(`/projects/${projectId}`);
+  revalidatePath("/");
+}
+
+export async function deleteInvoiceAction(formData: FormData) {
+  const invoiceId = text(formData, "invoice_id");
+  const projectId = text(formData, "project_id");
+
+  if (!invoiceId) {
+    return;
+  }
+
+  const { supabase } = await getAuthedSupabase("/invoices");
+  await supabase.from("invoices").delete().eq("id", invoiceId);
+
+  revalidatePath("/invoices");
+  if (projectId) {
+    revalidatePath(`/projects/${projectId}`);
+  }
   revalidatePath("/");
 }
