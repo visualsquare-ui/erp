@@ -11,6 +11,7 @@ import {
   restorePurchaseOrderAction,
   updatePurchaseOrderAction,
   updateVendorBillAction,
+  updateVendorBillPaymentStatusAction,
 } from "@/app/actions";
 import { EmptyState } from "@/components/empty-state";
 import { ListActionButton } from "@/components/list-action-button";
@@ -21,6 +22,11 @@ import {
   getVendorBillUploadContentType,
   isAllowedVendorBillFile,
 } from "@/lib/vendor-bill-files";
+import {
+  getVendorBillStatusLabel,
+  getVendorBillStatusTone,
+  isVendorBillPaid,
+} from "@/lib/vendor-bill-status";
 import type {
   ClientRow,
   JobRow,
@@ -239,6 +245,19 @@ export function PurchasingManagement({
     }
   }
 
+  async function updateBillPaymentStatus(bill: VendorBillRow) {
+    const nextStatus = isVendorBillPaid(bill.status) ? "received" : "paid";
+    const formData = new FormData();
+    formData.set("vendor_bill_id", bill.id);
+    formData.set("status", nextStatus);
+
+    if (bill.project_id) {
+      formData.set("project_id", bill.project_id);
+    }
+
+    await updateVendorBillPaymentStatusAction(formData);
+  }
+
   return (
     <section className="space-y-6">
       {jobsSetupError ? (
@@ -366,8 +385,13 @@ export function PurchasingManagement({
                   bill.due_date ? `Due ${formatUsDate(bill.due_date)}` : "No due date",
                 ].join(" · ")}
                 amount={formatCurrency(toNumber(bill.amount))}
-                status={bill.status}
+                status={getVendorBillStatusLabel(bill.status)}
+                statusTone={getVendorBillStatusTone(bill.status)}
                 fileUrl={bill.file_url ?? undefined}
+                paymentActionLabel={
+                  isVendorBillPaid(bill.status) ? "Mark unpaid" : "Mark paid"
+                }
+                onPaymentAction={() => void updateBillPaymentStatus(bill)}
                 onEdit={() => {
                   setEditingBill(bill);
                   setBillMode("edit");
@@ -922,8 +946,8 @@ function VendorBillForm({
             name="status"
             defaultValue={bill?.status ?? "received"}
           >
-            <option value="received">received</option>
-            <option value="paid">paid</option>
+            <option value="received">Unpaid</option>
+            <option value="paid">Paid</option>
           </select>
         </Field>
       </div>
@@ -1053,7 +1077,10 @@ function DocumentRow({
   meta,
   amount,
   status,
+  statusTone = "neutral",
   fileUrl,
+  paymentActionLabel,
+  onPaymentAction,
   onEdit,
   onDelete,
 }: {
@@ -1061,16 +1088,25 @@ function DocumentRow({
   meta: string;
   amount: string;
   status: string;
+  statusTone?: "neutral" | "warning" | "success";
   fileUrl?: string;
+  paymentActionLabel?: string;
+  onPaymentAction?: () => void;
   onEdit: () => void;
   onDelete: () => void;
 }) {
+  const statusToneClass = {
+    neutral: "border-[var(--border)] bg-white text-[var(--muted)]",
+    warning: "border-[#e7c8a5] bg-[#fff7ed] text-[#8a4a0a]",
+    success: "border-[var(--success)]/25 bg-[#E9F6EF] text-[var(--success)]",
+  }[statusTone];
+
   return (
     <article className="grid gap-3 py-4 text-sm md:grid-cols-[minmax(0,1fr)_9rem]">
       <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-2">
           <h3 className="break-words font-semibold">{title}</h3>
-          <span className="border border-[var(--border)] bg-white px-2 py-0.5 text-xs font-semibold text-[var(--muted)]">
+          <span className={`border px-2 py-0.5 text-xs font-semibold ${statusToneClass}`}>
             {status}
           </span>
         </div>
@@ -1089,6 +1125,14 @@ function DocumentRow({
       <div className="flex flex-col gap-2 md:items-end">
         <strong className="tabular-nums">{amount}</strong>
         <div className="flex justify-end gap-1 border-t border-[var(--border)] pt-2 md:w-full">
+          {paymentActionLabel && onPaymentAction ? (
+            <ListActionButton
+              icon={<span className="h-1.5 w-1.5 bg-current" aria-hidden="true" />}
+              onClick={onPaymentAction}
+            >
+              {paymentActionLabel}
+            </ListActionButton>
+          ) : null}
           <ListActionButton
             icon={<Pencil className="h-3.5 w-3.5" aria-hidden="true" />}
             onClick={onEdit}

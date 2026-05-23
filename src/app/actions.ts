@@ -593,6 +593,7 @@ export async function restorePurchaseOrderAction(formData: FormData) {
 export async function createVendorBillAction(formData: FormData) {
   const projectId = text(formData, "project_id");
   const returnPath = text(formData, "return_path") ?? "/purchasing";
+  const status = text(formData, "status") ?? "received";
   const { supabase } = await getAuthedSupabase(returnPath);
   const { error } = await supabase.from("vendor_bills").insert({
     project_id: projectId,
@@ -602,8 +603,8 @@ export async function createVendorBillAction(formData: FormData) {
     received_date: text(formData, "received_date") ?? todayIso(),
     due_date: text(formData, "due_date"),
     amount: money(formData, "amount"),
-    status: text(formData, "status") ?? "received",
-    paid_date: text(formData, "paid_date"),
+    status,
+    paid_date: status === "paid" ? text(formData, "paid_date") ?? todayIso() : null,
     file_url: text(formData, "file_url"),
   });
 
@@ -622,6 +623,7 @@ export async function createVendorBillAction(formData: FormData) {
 export async function updateVendorBillAction(formData: FormData) {
   const billId = text(formData, "vendor_bill_id");
   const projectId = text(formData, "project_id");
+  const status = text(formData, "status") ?? "received";
 
   if (!billId) {
     return;
@@ -638,14 +640,44 @@ export async function updateVendorBillAction(formData: FormData) {
       received_date: text(formData, "received_date") ?? todayIso(),
       due_date: text(formData, "due_date"),
       amount: money(formData, "amount"),
-      status: text(formData, "status") ?? "received",
-      paid_date: text(formData, "paid_date"),
+      status,
+      paid_date: status === "paid" ? text(formData, "paid_date") ?? todayIso() : null,
       file_url: text(formData, "file_url"),
     })
     .eq("id", billId);
 
   if (error) {
     throw new Error(`Bill 수정 실패: ${error.message}`);
+  }
+
+  revalidatePath("/purchasing");
+  revalidatePath("/jobs");
+  if (projectId) {
+    revalidatePath(`/projects/${projectId}`);
+  }
+  revalidatePath("/");
+}
+
+export async function updateVendorBillPaymentStatusAction(formData: FormData) {
+  const billId = text(formData, "vendor_bill_id");
+  const projectId = text(formData, "project_id");
+  const status = text(formData, "status") ?? "received";
+
+  if (!billId) {
+    return;
+  }
+
+  const { supabase } = await getAuthedSupabase("/purchasing");
+  const { error } = await supabase
+    .from("vendor_bills")
+    .update({
+      status,
+      paid_date: status === "paid" ? todayIso() : null,
+    })
+    .eq("id", billId);
+
+  if (error) {
+    throw new Error(`Bill payment status 수정 실패: ${error.message}`);
   }
 
   revalidatePath("/purchasing");
