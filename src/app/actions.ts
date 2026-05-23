@@ -18,6 +18,7 @@ import {
 import { addPaymentTermDays, type PaymentTerms } from "@/lib/format";
 import { getAuthedSupabase } from "@/lib/erp-data";
 import type { ProjectType } from "@/lib/project-rules";
+import { getInvoiceItemSchemaHint } from "@/lib/supabase-schema-errors";
 import type { ProjectStatus, TaskStatus } from "@/types/erp";
 
 function text(formData: FormData, key: string): string | null {
@@ -894,7 +895,11 @@ export async function createInvoiceAction(formData: FormData) {
 
     if (itemError) {
       await supabase.from("invoices").delete().eq("id", data.id);
-      throw new Error(`Invoice item 저장 실패: ${itemError.message}`);
+      throw new Error(
+        `Invoice item 저장 실패: ${itemError.message}${getInvoiceItemSchemaHint(
+          itemError.message,
+        )}`,
+      );
     }
   }
 
@@ -970,7 +975,11 @@ export async function updateInvoiceAction(formData: FormData) {
   );
 
   if (insertItemsError) {
-    throw new Error(`Invoice item 수정 실패: ${insertItemsError.message}`);
+    throw new Error(
+      `Invoice item 수정 실패: ${
+        insertItemsError.message
+      }${getInvoiceItemSchemaHint(insertItemsError.message)}`,
+    );
   }
 
   revalidatePath("/invoices");
