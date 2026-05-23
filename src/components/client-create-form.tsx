@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { Pencil } from "lucide-react";
 
 import { createClientAction, updateClientAction } from "@/app/actions";
 import { calculateOutstandingAr, toNumber } from "@/lib/erp-calculations";
@@ -521,33 +522,19 @@ export function ClientManagement({
                 className="grid gap-4 border-b border-[var(--border)] p-5 last:border-b-0 md:grid-cols-[minmax(0,1fr)_220px]"
               >
                 <div className="min-w-0">
-                  <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                    <div className="min-w-0">
-                      <h3 className="break-words font-semibold">
-                        {client.company_name ?? client.name}
-                      </h3>
-                      <div className="mt-2 space-y-0.5">
-                        <DetailLine label="Contact" value={client.name} />
-                        <DetailLine label="Email" value={client.email} />
-                        <DetailLine
-                          label="Phone"
-                          value={formatClientPhone(client.phone)}
-                        />
-                        {client.address ? (
-                          <DetailLine label="Address" value={client.address} />
-                        ) : null}
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      className="shrink-0 text-sm font-semibold text-[var(--coral-strong)] hover:text-[var(--foreground)]"
-                      onClick={() => {
-                        setEditingClient(client);
-                        setFormMode("edit");
-                      }}
-                    >
-                      수정
-                    </button>
+                  <h3 className="break-words font-semibold">
+                    {client.company_name ?? client.name}
+                  </h3>
+                  <div className="mt-2 space-y-0.5">
+                    <DetailLine label="Contact" value={client.name} />
+                    <DetailLine label="Email" value={client.email} />
+                    <DetailLine
+                      label="Phone"
+                      value={formatClientPhone(client.phone)}
+                    />
+                    {client.address ? (
+                      <DetailLine label="Address" value={client.address} />
+                    ) : null}
                   </div>
                   {client.memo ? (
                     <p className="mt-2 break-words text-sm text-[var(--muted)]">
@@ -556,6 +543,19 @@ export function ClientManagement({
                   ) : null}
                 </div>
                 <div className="grid grid-cols-3 gap-2 text-sm md:grid-cols-1">
+                  <div>
+                    <button
+                      type="button"
+                      className="ui-button ui-button-secondary min-h-9 w-full px-3"
+                      onClick={() => {
+                        setEditingClient(client);
+                        setFormMode("edit");
+                      }}
+                    >
+                      <Pencil className="mr-2 h-4 w-4" aria-hidden="true" />
+                      수정
+                    </button>
+                  </div>
                   <div>
                     <p className="text-xs text-[var(--muted)]">Projects</p>
                     <p className="font-semibold tabular-nums">
