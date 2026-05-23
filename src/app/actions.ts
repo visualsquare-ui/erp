@@ -189,8 +189,14 @@ export async function createProjectAction(formData: FormData) {
 
 export async function createJobAction(formData: FormData) {
   const { supabase } = await getAuthedSupabase("/jobs");
-  await supabase.from("jobs").insert({
-    client_id: text(formData, "client_id"),
+  const clientId = text(formData, "client_id");
+
+  if (!clientId) {
+    throw new Error("Job을 저장하려면 Client를 선택해야 합니다.");
+  }
+
+  const { error } = await supabase.from("jobs").insert({
+    client_id: clientId,
     project_id: text(formData, "project_id"),
     name: text(formData, "name") ?? "Untitled job",
     type: (text(formData, "type") ?? "print") as ProjectType,
@@ -201,7 +207,13 @@ export async function createJobAction(formData: FormData) {
     quote_amount: money(formData, "quote_amount"),
   });
 
+  if (error) {
+    throw new Error(`Job 저장 실패: ${error.message}`);
+  }
+
   revalidatePath("/jobs");
+  revalidatePath("/purchasing");
+  revalidatePath("/clients");
   revalidatePath("/");
 }
 
@@ -327,7 +339,7 @@ export async function createPurchaseOrderAction(formData: FormData) {
   const returnPath = text(formData, "return_path") ?? "/purchasing";
   const orderItems = parsePurchaseOrderItems(formData);
   const { supabase } = await getAuthedSupabase(returnPath);
-  await supabase.from("purchase_orders").insert({
+  const { error } = await supabase.from("purchase_orders").insert({
     project_id: projectId,
     vendor_id: text(formData, "vendor_id"),
     po_number: text(formData, "po_number") ?? `PO-${Date.now()}`,
@@ -337,6 +349,11 @@ export async function createPurchaseOrderAction(formData: FormData) {
     amount: orderItems.total,
     status: text(formData, "status") ?? "ordered",
   });
+
+  if (error) {
+    throw new Error(`PO 저장 실패: ${error.message}`);
+  }
+
   revalidatePath("/purchasing");
   revalidatePath("/jobs");
   if (projectId) {
@@ -355,7 +372,7 @@ export async function updatePurchaseOrderAction(formData: FormData) {
 
   const orderItems = parsePurchaseOrderItems(formData);
   const { supabase } = await getAuthedSupabase("/purchasing");
-  await supabase
+  const { error } = await supabase
     .from("purchase_orders")
     .update({
       project_id: projectId,
@@ -368,6 +385,10 @@ export async function updatePurchaseOrderAction(formData: FormData) {
       status: text(formData, "status") ?? "ordered",
     })
     .eq("id", orderId);
+
+  if (error) {
+    throw new Error(`PO 수정 실패: ${error.message}`);
+  }
 
   revalidatePath("/purchasing");
   revalidatePath("/jobs");
@@ -457,7 +478,7 @@ export async function createVendorBillAction(formData: FormData) {
   const projectId = text(formData, "project_id");
   const returnPath = text(formData, "return_path") ?? "/purchasing";
   const { supabase } = await getAuthedSupabase(returnPath);
-  await supabase.from("vendor_bills").insert({
+  const { error } = await supabase.from("vendor_bills").insert({
     project_id: projectId,
     vendor_id: text(formData, "vendor_id"),
     purchase_order_id: text(formData, "purchase_order_id"),
@@ -469,6 +490,11 @@ export async function createVendorBillAction(formData: FormData) {
     paid_date: text(formData, "paid_date"),
     file_url: text(formData, "file_url"),
   });
+
+  if (error) {
+    throw new Error(`Bill 저장 실패: ${error.message}`);
+  }
+
   revalidatePath("/purchasing");
   revalidatePath("/jobs");
   if (projectId) {
@@ -486,7 +512,7 @@ export async function updateVendorBillAction(formData: FormData) {
   }
 
   const { supabase } = await getAuthedSupabase("/purchasing");
-  await supabase
+  const { error } = await supabase
     .from("vendor_bills")
     .update({
       project_id: projectId,
@@ -501,6 +527,10 @@ export async function updateVendorBillAction(formData: FormData) {
       file_url: text(formData, "file_url"),
     })
     .eq("id", billId);
+
+  if (error) {
+    throw new Error(`Bill 수정 실패: ${error.message}`);
+  }
 
   revalidatePath("/purchasing");
   revalidatePath("/jobs");

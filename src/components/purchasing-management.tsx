@@ -18,6 +18,7 @@ import { toNumber } from "@/lib/erp-calculations";
 import { formatCurrency, formatUsDate } from "@/lib/format";
 import { createClient as createBrowserSupabaseClient } from "@/lib/supabase/client";
 import type {
+  ClientRow,
   JobRow,
   ProjectRow,
   PurchaseOrderRow,
@@ -26,11 +27,13 @@ import type {
 } from "@/types/database";
 
 type PurchasingManagementProps = {
+  clients: ClientRow[];
   vendors: VendorRow[];
   jobs: JobRow[];
   projects: ProjectRow[];
   purchaseOrders: PurchaseOrderRow[];
   bills: VendorBillRow[];
+  jobsSetupError?: string | null;
 };
 
 type PurchaseOrderItem = {
@@ -154,11 +157,13 @@ function getJobLabel(job: JobRow) {
 }
 
 export function PurchasingManagement({
+  clients,
   vendors,
   jobs,
   projects,
   purchaseOrders,
   bills,
+  jobsSetupError,
 }: PurchasingManagementProps) {
   const [poFormKey, setPoFormKey] = useState(0);
   const [orderMode, setOrderMode] = useState<"closed" | "create" | "edit">(
@@ -240,9 +245,21 @@ export function PurchasingManagement({
 
   return (
     <section className="space-y-6">
+      {jobsSetupError ? (
+        <div className="ui-card border-[#d8c2bd] bg-[#fff8f6] p-4">
+          <h2 className="text-sm font-semibold text-[#8a2f1e]">
+            Supabase Jobs SQL 실행 필요
+          </h2>
+          <p className="mt-1 text-sm leading-6 text-[var(--muted)]">
+            {jobsSetupError} PO는 Job 없이 저장할 수 있지만, Job 연결과 Job
+            목록을 쓰려면 SQL 적용이 먼저 필요합니다.
+          </p>
+        </div>
+      ) : null}
+
       <Panel
         title="PO"
-        description="인쇄소에 나가는 발주서를 프로젝트 기준으로 관리합니다."
+        description="인쇄소에 나가는 발주서를 Job 또는 클라이언트 기준으로 관리합니다."
         actionLabel="PO 추가"
         onAdd={() => {
           setEditingOrder(null);
@@ -255,6 +272,7 @@ export function PurchasingManagement({
           <PurchaseOrderForm
             key={editingOrder?.id ?? `new-po-${poFormKey}`}
             mode={orderMode === "edit" ? "edit" : "create"}
+            clients={clients}
             vendors={vendors}
             jobs={jobs}
             projects={projects}
@@ -371,6 +389,7 @@ export function PurchasingManagement({
 
 function PurchaseOrderForm({
   mode,
+  clients,
   vendors,
   jobs,
   projects,
@@ -379,6 +398,7 @@ function PurchaseOrderForm({
   onSaved,
 }: {
   mode: "create" | "edit";
+  clients: ClientRow[];
   vendors: VendorRow[];
   jobs: JobRow[];
   projects: ProjectRow[];
@@ -397,9 +417,34 @@ function PurchaseOrderForm({
     value: string,
   ) {
     setItems((currentItems) =>
-      currentItems.map((item, itemIndex) =>
-        itemIndex === index ? { ...item, [key]: value } : item,
-      ),
+      currentItems.map((item, itemIndex) => {
+        if (itemIndex !== index) {
+          return item;
+        }
+
+        if (key === "clientId") {
+          const selectedJob = jobs.find((job) => job.id === item.jobId);
+
+          return {
+            ...item,
+            clientId: value,
+            jobId:
+              selectedJob && selectedJob.client_id !== value ? "" : item.jobId,
+          };
+        }
+
+        if (key === "jobId") {
+          const selectedJob = jobs.find((job) => job.id === value);
+
+          return {
+            ...item,
+            jobId: value,
+            clientId: selectedJob?.client_id ?? item.clientId,
+          };
+        }
+
+        return { ...item, [key]: value };
+      }),
     );
   }
 
@@ -537,8 +582,9 @@ function PurchaseOrderForm({
           </button>
         </div>
         <div className="overflow-x-auto border border-[var(--border)] bg-white">
-          <div className="min-w-[48rem]">
-            <div className="grid h-8 grid-cols-[14rem_minmax(0,1fr)_7rem_4.5rem_7rem_2rem] items-center gap-2 border-b border-[var(--border)] px-2 text-[0.68rem] font-semibold uppercase tracking-[0.08em] text-[var(--muted)]">
+          <div className="min-w-[62rem]">
+            <div className="grid h-8 grid-cols-[12rem_14rem_minmax(0,1fr)_7rem_4.5rem_7rem_2rem] items-center gap-2 border-b border-[var(--border)] px-2 text-[0.68rem] font-semibold uppercase tracking-[0.08em] text-[var(--muted)]">
+              <span>Client</span>
               <span>Job</span>
               <span>Item</span>
               <span>Unit Price</span>
@@ -550,23 +596,40 @@ function PurchaseOrderForm({
               {items.map((item, index) => {
                 const lineTotal =
                   toNumber(item.unitPrice) * (toNumber(item.qty) || 0);
+                const visibleJobs = item.clientId
+                  ? jobs.filter((job) => job.client_id === item.clientId)
+                  : jobs;
 
                 return (
                   <div
                     key={index}
-                    className="grid grid-cols-[14rem_minmax(0,1fr)_7rem_4.5rem_7rem_2rem] items-center gap-2 px-2 py-1.5"
+                    className="grid grid-cols-[12rem_14rem_minmax(0,1fr)_7rem_4.5rem_7rem_2rem] items-center gap-2 px-2 py-1.5"
                   >
                     <select
                       className="ui-input min-h-8 border-transparent px-2 text-sm hover:border-[var(--border)] focus-visible:border-[var(--coral)]"
+                      value={item.clientId}
+                      aria-label={`PO item ${index + 1} client`}
+                      onChange={(event) =>
+                        updateItem(index, "clientId", event.target.value)
+                      }
+                    >
+                      <option value="">No client</option>
+                      {clients.map((client) => (
+                        <option key={client.id} value={client.id}>
+                          {client.company_name ?? client.name}
+                        </option>
+                      ))}
+                    </select>
+                    <select
+                      className="ui-input min-h-8 border-transparent px-2 text-sm hover:border-[var(--border)] focus-visible:border-[var(--coral)]"
                       value={item.jobId}
-                      required
                       aria-label={`PO item ${index + 1} job`}
                       onChange={(event) =>
                         updateItem(index, "jobId", event.target.value)
                       }
                     >
-                      <option value="">Job</option>
-                      {jobs.map((job) => (
+                      <option value="">No job</option>
+                      {visibleJobs.map((job) => (
                         <option key={job.id} value={job.id}>
                           {getJobLabel(job)}
                         </option>

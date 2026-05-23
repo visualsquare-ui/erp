@@ -33,6 +33,27 @@ function isPurchaseOrderDeleted(order: PurchaseOrderRow) {
   }
 }
 
+function throwIfSupabaseError(
+  error: { message: string } | null,
+  label: string,
+) {
+  if (error) {
+    throw new Error(`${label}: ${error.message}`);
+  }
+}
+
+function getMissingJobsTableMessage(error: { message: string } | null) {
+  if (!error) {
+    return null;
+  }
+
+  if (error.message.includes("public.jobs")) {
+    return "Supabase에 jobs 테이블이 아직 없습니다. supabase/migrations/202605230002_jobs_first_schema.sql 을 실행해 주세요.";
+  }
+
+  return null;
+}
+
 export async function getAuthedSupabase(pathname = "/") {
   const supabase = await createClient();
   const {
@@ -118,11 +139,20 @@ export async function getJobsPageData() {
       .order("due_date", { ascending: true }),
   ]);
 
+  throwIfSupabaseError(clientsResult.error, "Clients 조회 실패");
+  throwIfSupabaseError(projectsResult.error, "Project groups 조회 실패");
+  const setupError = getMissingJobsTableMessage(jobsResult.error);
+
+  if (!setupError) {
+    throwIfSupabaseError(jobsResult.error, "Jobs 조회 실패");
+  }
+
   return {
     user,
     clients: (clientsResult.data ?? []) as ClientRow[],
     projects: (projectsResult.data ?? []) as ProjectRow[],
     jobs: (jobsResult.data ?? []) as JobRow[],
+    setupError,
   };
 }
 
@@ -214,6 +244,7 @@ export async function getInvoicesPageData() {
 export async function getPurchasingPageData() {
   const { user, supabase } = await getAuthedSupabase("/purchasing");
   const [
+    clientsResult,
     vendorsResult,
     projectsResult,
     jobsResult,
@@ -221,6 +252,7 @@ export async function getPurchasingPageData() {
     billsResult,
   ] =
     await Promise.all([
+    supabase.from("clients").select("*").order("company_name"),
     supabase.from("vendors").select("*").order("name"),
     supabase.from("projects").select("*, clients(company_name, name)").order("name"),
     supabase.from("jobs").select("*, clients(company_name, name), projects(name, type)").order("name"),
@@ -228,11 +260,19 @@ export async function getPurchasingPageData() {
     supabase.from("vendor_bills").select("*, vendors(name), projects(name, type)").order("received_date", { ascending: false }),
   ]);
 
+  const jobsSetupError = getMissingJobsTableMessage(jobsResult.error);
+
+  if (!jobsSetupError) {
+    throwIfSupabaseError(jobsResult.error, "Jobs 조회 실패");
+  }
+
   return {
     user,
+    clients: (clientsResult.data ?? []) as ClientRow[],
     vendors: (vendorsResult.data ?? []) as VendorRow[],
     projects: (projectsResult.data ?? []) as ProjectRow[],
     jobs: (jobsResult.data ?? []) as JobRow[],
+    jobsSetupError,
     purchaseOrders: ((ordersResult.data ?? []) as PurchaseOrderRow[]).filter(
       (order) => !isPurchaseOrderDeleted(order),
     ),
