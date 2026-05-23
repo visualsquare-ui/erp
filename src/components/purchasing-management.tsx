@@ -8,6 +8,7 @@ import {
   createVendorBillAction,
   deletePurchaseOrderAction,
   deleteVendorBillAction,
+  restorePurchaseOrderAction,
   updatePurchaseOrderAction,
   updateVendorBillAction,
 } from "@/app/actions";
@@ -106,6 +107,9 @@ export function PurchasingManagement({
     null,
   );
   const [editingBill, setEditingBill] = useState<VendorBillRow | null>(null);
+  const [deletedOrder, setDeletedOrder] = useState<PurchaseOrderRow | null>(
+    null,
+  );
 
   function closeOrderForm() {
     setOrderMode("closed");
@@ -127,11 +131,24 @@ export function PurchasingManagement({
     const formData = new FormData();
     formData.set("purchase_order_id", order.id);
     formData.set("project_id", order.project_id);
+    setDeletedOrder(order);
     await deletePurchaseOrderAction(formData);
 
     if (editingOrder?.id === order.id) {
       closeOrderForm();
     }
+  }
+
+  async function undoDeleteOrder() {
+    if (!deletedOrder) {
+      return;
+    }
+
+    const formData = new FormData();
+    formData.set("purchase_order_id", deletedOrder.id);
+    formData.set("project_id", deletedOrder.project_id);
+    await restorePurchaseOrderAction(formData);
+    setDeletedOrder(null);
   }
 
   async function deleteBill(bill: VendorBillRow) {
@@ -175,6 +192,23 @@ export function PurchasingManagement({
             onCancel={closeOrderForm}
             onSaved={closeOrderForm}
           />
+        ) : null}
+        {deletedOrder ? (
+          <div className="flex flex-col justify-between gap-2 border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm sm:flex-row sm:items-center">
+            <p className="text-[var(--muted)]">
+              <span className="font-semibold text-[var(--foreground)]">
+                {deletedOrder.po_number}
+              </span>{" "}
+              삭제됨
+            </p>
+            <button
+              type="button"
+              className="inline-flex h-7 items-center border border-[var(--border-strong)] bg-white px-2 text-xs font-semibold text-[var(--foreground)] transition-colors hover:border-[var(--coral)] hover:bg-[var(--coral-quiet)] hover:text-[var(--coral-strong)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--coral)]"
+              onClick={() => void undoDeleteOrder()}
+            >
+              Undo
+            </button>
+          </div>
         ) : null}
 
         {purchaseOrders.length === 0 ? (
@@ -224,6 +258,7 @@ export function PurchasingManagement({
             mode={billMode === "edit" ? "edit" : "create"}
             vendors={vendors}
             projects={projects}
+            purchaseOrders={purchaseOrders}
             bill={editingBill ?? undefined}
             onCancel={closeBillForm}
             onSaved={closeBillForm}
@@ -546,6 +581,7 @@ function VendorBillForm({
   mode,
   vendors,
   projects,
+  purchaseOrders,
   bill,
   onCancel,
   onSaved,
@@ -553,10 +589,38 @@ function VendorBillForm({
   mode: "create" | "edit";
   vendors: VendorRow[];
   projects: ProjectRow[];
+  purchaseOrders: PurchaseOrderRow[];
   bill?: VendorBillRow;
   onCancel: () => void;
   onSaved: () => void;
 }) {
+  const [selectedPurchaseOrderId, setSelectedPurchaseOrderId] = useState(
+    bill?.purchase_order_id ?? "",
+  );
+  const [projectId, setProjectId] = useState(bill?.project_id ?? "");
+  const [vendorId, setVendorId] = useState(bill?.vendor_id ?? "");
+  const [amount, setAmount] = useState(bill ? String(toNumber(bill.amount)) : "");
+  const selectedPurchaseOrder =
+    purchaseOrders.find((order) => order.id === selectedPurchaseOrderId) ?? null;
+  const selectedPurchaseOrderItems = parsePurchaseOrderItems(
+    selectedPurchaseOrder ?? undefined,
+  );
+
+  function selectPurchaseOrder(purchaseOrderId: string) {
+    setSelectedPurchaseOrderId(purchaseOrderId);
+    const purchaseOrder = purchaseOrders.find(
+      (order) => order.id === purchaseOrderId,
+    );
+
+    if (!purchaseOrder) {
+      return;
+    }
+
+    setProjectId(purchaseOrder.project_id);
+    setVendorId(purchaseOrder.vendor_id);
+    setAmount(String(toNumber(purchaseOrder.amount)));
+  }
+
   async function submit(formData: FormData) {
     if (mode === "edit") {
       await updateVendorBillAction(formData);
@@ -577,15 +641,49 @@ function VendorBillForm({
       {bill ? (
         <>
           <input type="hidden" name="vendor_bill_id" value={bill.id} />
-          <input
-            type="hidden"
-            name="purchase_order_id"
-            value={bill.purchase_order_id ?? ""}
-          />
           <input type="hidden" name="received_date" value={bill.received_date} />
           <input type="hidden" name="paid_date" value={bill.paid_date ?? ""} />
           <input type="hidden" name="file_url" value={bill.file_url ?? ""} />
         </>
+      ) : null}
+
+      <Field label="PO">
+        <select
+          className="ui-input"
+          name="purchase_order_id"
+          value={selectedPurchaseOrderId}
+          onChange={(event) => selectPurchaseOrder(event.target.value)}
+        >
+          <option value="">Select PO</option>
+          {purchaseOrders.map((purchaseOrder) => (
+            <option key={purchaseOrder.id} value={purchaseOrder.id}>
+              {purchaseOrder.po_number} · {purchaseOrder.projects?.name ?? "-"} ·{" "}
+              {formatCurrency(toNumber(purchaseOrder.amount))}
+            </option>
+          ))}
+        </select>
+      </Field>
+      {selectedPurchaseOrder ? (
+        <div className="border border-[var(--border)] bg-white px-3 py-2 text-xs">
+          <p className="mb-2 font-semibold uppercase tracking-[0.08em] text-[var(--muted)]">
+            PO items
+          </p>
+          <div className="space-y-1">
+            {selectedPurchaseOrderItems.map((item, index) => (
+              <div
+                key={`${item.item}-${index}`}
+                className="flex justify-between gap-3 text-[var(--muted)]"
+              >
+                <span className="min-w-0 break-words">{item.item || "-"}</span>
+                <span className="shrink-0 tabular-nums">
+                  {formatCurrency(
+                    toNumber(item.unitPrice) * (toNumber(item.qty) || 0),
+                  )}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
       ) : null}
 
       <div className="grid gap-3 md:grid-cols-2">
@@ -594,7 +692,8 @@ function VendorBillForm({
             className="ui-input"
             name="project_id"
             required
-            defaultValue={bill?.project_id ?? ""}
+            value={projectId}
+            onChange={(event) => setProjectId(event.target.value)}
           >
             <option value="">Project</option>
             {projects.map((project) => (
@@ -609,7 +708,8 @@ function VendorBillForm({
             className="ui-input"
             name="vendor_id"
             required
-            defaultValue={bill?.vendor_id ?? ""}
+            value={vendorId}
+            onChange={(event) => setVendorId(event.target.value)}
           >
             <option value="">Vendor</option>
             {vendors.map((vendor) => (
@@ -638,7 +738,8 @@ function VendorBillForm({
             step="0.01"
             placeholder="850.00"
             inputMode="decimal"
-            defaultValue={bill ? toNumber(bill.amount) : ""}
+            value={amount}
+            onChange={(event) => setAmount(event.target.value)}
           />
         </Field>
         <Field label="Status">

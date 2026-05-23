@@ -38,6 +38,27 @@ type PurchaseOrderItemInput = {
   qty: number;
 };
 
+type PurchaseOrderSpec = {
+  items?: PurchaseOrderItemInput[];
+  meta?: {
+    deletedAt?: string;
+    previousStatus?: string;
+  };
+};
+
+function parsePurchaseOrderSpec(value: string | null): PurchaseOrderSpec {
+  if (!value) {
+    return {};
+  }
+
+  try {
+    const parsed = JSON.parse(value) as PurchaseOrderSpec;
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
 function parsePurchaseOrderItems(formData: FormData): {
   items: PurchaseOrderItemInput[];
   total: number;
@@ -339,7 +360,65 @@ export async function deletePurchaseOrderAction(formData: FormData) {
   }
 
   const { supabase } = await getAuthedSupabase("/purchasing");
-  await supabase.from("purchase_orders").delete().eq("id", orderId);
+  const { data: order } = await supabase
+    .from("purchase_orders")
+    .select("spec, status")
+    .eq("id", orderId)
+    .single();
+  const spec = parsePurchaseOrderSpec(order?.spec ?? null);
+
+  await supabase
+    .from("purchase_orders")
+    .update({
+      spec: JSON.stringify({
+        ...spec,
+        meta: {
+          ...(spec.meta ?? {}),
+          deletedAt: new Date().toISOString(),
+          previousStatus: order?.status ?? "ordered",
+        },
+      }),
+      status: "canceled",
+    })
+    .eq("id", orderId);
+
+  revalidatePath("/purchasing");
+  if (projectId) {
+    revalidatePath(`/projects/${projectId}`);
+  }
+  revalidatePath("/");
+}
+
+export async function restorePurchaseOrderAction(formData: FormData) {
+  const orderId = text(formData, "purchase_order_id");
+  const projectId = text(formData, "project_id");
+
+  if (!orderId) {
+    return;
+  }
+
+  const { supabase } = await getAuthedSupabase("/purchasing");
+  const { data: order } = await supabase
+    .from("purchase_orders")
+    .select("spec")
+    .eq("id", orderId)
+    .single();
+  const spec = parsePurchaseOrderSpec(order?.spec ?? null);
+  const previousStatus = spec.meta?.previousStatus ?? "ordered";
+  const meta = { ...(spec.meta ?? {}) };
+  delete meta.deletedAt;
+  delete meta.previousStatus;
+
+  await supabase
+    .from("purchase_orders")
+    .update({
+      spec: JSON.stringify({
+        ...spec,
+        meta: Object.keys(meta).length > 0 ? meta : undefined,
+      }),
+      status: previousStatus,
+    })
+    .eq("id", orderId);
 
   revalidatePath("/purchasing");
   if (projectId) {

@@ -44,6 +44,7 @@ This guide is the working design reference for the internal ERP. It distills the
 - Secondary row actions such as edit, delete, and add line item should be small utility controls.
 - Icon buttons need `aria-label`; icon + text buttons should stay compact.
 - Delete actions use subdued danger styling and require confirmation.
+- Financial document deletion should support Undo when practical.
 
 ## Data Entry Patterns
 
@@ -52,6 +53,7 @@ This guide is the working design reference for the internal ERP. It distills the
 - Money totals should be calculated from line items when line items exist.
 - PO line item rows should use `Client / Item / Unit Price / Qty / Total`.
 - The final document total appears after the line items as `Total Amount`; it should not compete visually with form headings.
+- Bills can be started from an existing PO. Selecting a PO should prefill project, vendor, and amount while keeping those fields editable.
 
 ## Copy
 

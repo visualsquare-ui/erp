@@ -16,6 +16,22 @@ import type {
   WorkOrderRow,
 } from "@/types/database";
 
+function isPurchaseOrderDeleted(order: PurchaseOrderRow) {
+  if (!order.spec) {
+    return false;
+  }
+
+  try {
+    const spec = JSON.parse(order.spec) as {
+      meta?: { deletedAt?: string };
+    };
+
+    return Boolean(spec.meta?.deletedAt);
+  } catch {
+    return false;
+  }
+}
+
 export async function getAuthedSupabase(pathname = "/") {
   const supabase = await createClient();
   const {
@@ -130,7 +146,9 @@ export async function getProjectDetailData(id: string) {
     assets: (assetsResult.data ?? []) as AssetRow[],
     invoices: (invoicesResult.data ?? []) as (InvoiceRow & { invoice_items: InvoiceItemRow[] })[],
     bills: (billsResult.data ?? []) as VendorBillRow[],
-    purchaseOrders: (purchaseOrdersResult.data ?? []) as PurchaseOrderRow[],
+    purchaseOrders: ((purchaseOrdersResult.data ?? []) as PurchaseOrderRow[]).filter(
+      (order) => !isPurchaseOrderDeleted(order),
+    ),
   };
 }
 
@@ -173,7 +191,9 @@ export async function getPurchasingPageData() {
     vendors: (vendorsResult.data ?? []) as VendorRow[],
     clients: (clientsResult.data ?? []) as ClientRow[],
     projects: (projectsResult.data ?? []) as ProjectRow[],
-    purchaseOrders: (ordersResult.data ?? []) as PurchaseOrderRow[],
+    purchaseOrders: ((ordersResult.data ?? []) as PurchaseOrderRow[]).filter(
+      (order) => !isPurchaseOrderDeleted(order),
+    ),
     bills: (billsResult.data ?? []) as VendorBillRow[],
   };
 }
