@@ -1,3 +1,5 @@
+import path from "node:path";
+import fs from "node:fs";
 import PDFDocument from "pdfkit";
 
 import { toNumber } from "./erp-calculations";
@@ -7,6 +9,7 @@ import {
   getInvoiceRecipient,
   type InvoiceDocument,
 } from "./invoice-document";
+import { getInvoicePaymentLinks } from "./payment-links";
 
 export async function buildInvoicePdf(invoice: InvoiceDocument) {
   return new Promise<Buffer>((resolve, reject) => {
@@ -14,6 +17,7 @@ export async function buildInvoicePdf(invoice: InvoiceDocument) {
     const doc = new PDFDocument({
       size: "LETTER",
       margin: 48,
+      autoFirstPage: false,
       info: {
         Title: `Invoice ${invoice.invoice_number}`,
         Author: "Visual Square",
@@ -21,40 +25,55 @@ export async function buildInvoicePdf(invoice: InvoiceDocument) {
     });
     const recipient = getInvoiceRecipient(invoice);
     const lines = buildInvoiceLineItems(invoice);
+    const paymentLinks = getInvoicePaymentLinks();
+    const logoPath = path.join(process.cwd(), "assets", "vs-logo-transparent.png");
+    const logoImage = fs.readFileSync(logoPath);
+    const fontPath = path.join(
+      process.cwd(),
+      "node_modules",
+      "next",
+      "dist",
+      "compiled",
+      "@vercel",
+      "og",
+      "Geist-Regular.ttf",
+    );
+    const fontData = fs.readFileSync(fontPath);
 
     doc.on("data", (chunk: Buffer) => chunks.push(chunk));
     doc.on("error", reject);
     doc.on("end", () => resolve(Buffer.concat(chunks)));
+    doc.registerFont("VSRegular", fontData);
+    doc.registerFont("VSBold", fontData);
+    doc.addPage();
+
+    doc.image(logoImage, 44, 38, {
+      fit: [96, 96],
+      align: "center",
+      valign: "center",
+    });
 
     doc
-      .font("Times-Roman")
-      .fontSize(30)
-      .fillColor("#141414")
-      .text("visual", 48, 48, { continued: false })
-      .fillColor("#f57d4b")
-      .text("square", 48, 76);
-
-    doc
-      .font("Helvetica-Bold")
+      .font("VSBold")
       .fontSize(11)
       .fillColor("#f57d4b")
       .text("INVOICE", 390, 52, { align: "right", width: 156 })
-      .fontSize(24)
+      .fontSize(13)
       .fillColor("#141414")
-      .text(invoice.invoice_number, 330, 72, { align: "right", width: 216 });
+      .text(invoice.invoice_number, 330, 76, { align: "right", width: 216 });
 
     doc.moveTo(48, 124).lineTo(564, 124).strokeColor("#e7e2dd").stroke();
 
     doc
-      .font("Helvetica-Bold")
+      .font("VSBold")
       .fontSize(10)
       .fillColor("#6f6660")
       .text("BILL TO", 48, 154)
-      .font("Helvetica-Bold")
+      .font("VSBold")
       .fontSize(13)
       .fillColor("#141414")
       .text(recipient.name, 48, 174)
-      .font("Helvetica")
+      .font("VSRegular")
       .fontSize(10)
       .fillColor("#6f6660")
       .text(recipient.address || recipient.email || "-", 48, 194, {
@@ -62,7 +81,7 @@ export async function buildInvoicePdf(invoice: InvoiceDocument) {
       });
 
     doc
-      .font("Helvetica")
+      .font("VSRegular")
       .fontSize(10)
       .fillColor("#6f6660")
       .text("Issue", 390, 154)
@@ -78,17 +97,37 @@ export async function buildInvoicePdf(invoice: InvoiceDocument) {
       .text(invoice.projects?.name ?? "-", 470, 194, { align: "right" });
 
     let y = 256;
+    const tableLeft = 48;
+    const tableRight = 564;
+    const columns = {
+      description: { x: 60, width: 276 },
+      quantity: { x: 348, width: 42 },
+      unit: { x: 410, width: 58 },
+      amount: { x: 486, width: 60 },
+    };
+
     doc.rect(48, y - 24, 516, 28).fill("#fbf6f3");
     doc
-      .font("Helvetica-Bold")
+      .font("VSBold")
       .fontSize(9)
       .fillColor("#6f6660")
-      .text("DESCRIPTION", 60, y - 15)
-      .text("QTY", 350, y - 15, { width: 40, align: "right" })
-      .text("UNIT", 410, y - 15, { width: 55, align: "right" })
-      .text("AMOUNT", 486, y - 15, { width: 60, align: "right" });
+      .text("DESCRIPTION", columns.description.x, y - 15, {
+        width: columns.description.width,
+      })
+      .text("QTY", columns.quantity.x, y - 15, {
+        width: columns.quantity.width,
+        align: "right",
+      })
+      .text("UNIT", columns.unit.x, y - 15, {
+        width: columns.unit.width,
+        align: "right",
+      })
+      .text("AMOUNT", columns.amount.x, y - 15, {
+        width: columns.amount.width,
+        align: "right",
+      });
 
-    doc.font("Helvetica").fontSize(10).fillColor("#141414");
+    doc.font("VSRegular").fontSize(10).fillColor("#141414");
     lines.forEach((line) => {
       const rowTop = y + 10;
       doc
@@ -98,14 +137,19 @@ export async function buildInvoicePdf(invoice: InvoiceDocument) {
         .stroke();
       doc
         .fillColor("#141414")
-        .text(line.description, 60, rowTop, { width: 270 })
-        .text(String(line.quantity), 350, rowTop, { width: 40, align: "right" })
-        .text(formatCurrency(line.unitPrice), 410, rowTop, {
-          width: 55,
+        .text(line.description, columns.description.x, rowTop, {
+          width: columns.description.width,
+        })
+        .text(String(line.quantity), columns.quantity.x, rowTop, {
+          width: columns.quantity.width,
           align: "right",
         })
-        .text(formatCurrency(line.amount), 486, rowTop, {
-          width: 60,
+        .text(formatCurrency(line.unitPrice), columns.unit.x, rowTop, {
+          width: columns.unit.width,
+          align: "right",
+        })
+        .text(formatCurrency(line.amount), columns.amount.x, rowTop, {
+          width: columns.amount.width,
           align: "right",
         });
       y += 32;
@@ -124,7 +168,7 @@ export async function buildInvoicePdf(invoice: InvoiceDocument) {
     ].forEach(([label, value], index) => {
       const rowY = totalTop + index * 24;
       doc
-        .font(index === 2 ? "Helvetica-Bold" : "Helvetica")
+        .font(index === 2 ? "VSBold" : "VSRegular")
         .fontSize(index === 2 ? 12 : 10)
         .fillColor(index === 2 ? "#141414" : "#6f6660")
         .text(String(label), 390, rowY)
@@ -135,10 +179,38 @@ export async function buildInvoicePdf(invoice: InvoiceDocument) {
         });
     });
 
+    let paymentY = totalTop + 92;
+    if (paymentLinks.length > 0) {
+      paymentY = Math.max(paymentY, 520);
+      doc
+        .font("VSBold")
+        .fontSize(9)
+        .fillColor("#6f6660")
+        .text("PAYMENT OPTIONS", tableLeft, paymentY);
+
+      paymentLinks.forEach((link, index) => {
+        const rowY = paymentY + 20 + index * 18;
+        doc
+          .font("VSBold")
+          .fontSize(10)
+          .fillColor("#141414")
+          .text(`${link.label} (${link.method})`, tableLeft, rowY, {
+            width: 150,
+          })
+          .font("VSRegular")
+          .fillColor("#6f6660")
+          .text(link.href, tableLeft + 160, rowY, {
+            width: tableRight - tableLeft - 160,
+            link: link.href,
+            underline: true,
+          });
+      });
+    }
+
     doc
       .rect(48, 716, 516, 6)
       .fill("#f57d4b")
-      .font("Helvetica")
+      .font("VSRegular")
       .fontSize(9)
       .fillColor("#6f6660")
       .text("Visual Square", 48, 736)

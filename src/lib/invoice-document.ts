@@ -2,6 +2,7 @@ import type { ClientRow, InvoiceItemRow, InvoiceRow } from "@/types/database";
 
 import { toNumber } from "./erp-calculations";
 import { formatCurrency, formatUsDate } from "./format";
+import { getInvoicePaymentLinks } from "./payment-links";
 
 export type InvoiceDocument = InvoiceRow & {
   clients?: Pick<ClientRow, "company_name" | "name" | "email" | "address"> | null;
@@ -53,6 +54,23 @@ export function buildInvoiceEmailHtml(invoice: InvoiceDocument) {
   const projectName = escapeHtml(invoice.projects?.name ?? "Project");
   const total = formatCurrency(toNumber(invoice.total));
   const dueDate = formatUsDate(invoice.due_date);
+  const paymentLinks = getInvoicePaymentLinks();
+  const paymentHtml =
+    paymentLinks.length > 0
+      ? `<div style="margin:0 0 24px;">
+          <p style="margin:0 0 10px;color:#6f6660;font-size:12px;letter-spacing:0.12em;text-transform:uppercase;">Payment options</p>
+          <div style="display:block;">
+            ${paymentLinks
+              .map(
+                (link) => `
+                  <a href="${escapeHtml(link.href)}" style="display:inline-block;margin:0 8px 8px 0;border:1px solid #e7e2dd;padding:10px 14px;color:#141414;text-decoration:none;font-weight:700;">
+                    ${escapeHtml(link.label)}
+                  </a>`,
+              )
+              .join("")}
+          </div>
+        </div>`
+      : "";
 
   return `<!doctype html>
 <html>
@@ -77,6 +95,7 @@ export function buildInvoiceEmailHtml(invoice: InvoiceDocument) {
               <strong>${dueDate}</strong>
             </div>
           </div>
+          ${paymentHtml}
           <p style="margin:0;color:#6f6660;line-height:1.6;">Thank you,<br>Visual Square</p>
         </div>
         <div style="height:6px;background:#f57d4b;"></div>
@@ -88,6 +107,7 @@ export function buildInvoiceEmailHtml(invoice: InvoiceDocument) {
 
 export function buildInvoiceEmailText(invoice: InvoiceDocument) {
   const recipient = getInvoiceRecipient(invoice);
+  const paymentLinks = getInvoicePaymentLinks();
 
   return [
     `Hello ${recipient.name},`,
@@ -96,6 +116,15 @@ export function buildInvoiceEmailText(invoice: InvoiceDocument) {
       toNumber(invoice.total),
     )}.`,
     `Due date: ${formatUsDate(invoice.due_date)}`,
+    ...(paymentLinks.length > 0
+      ? [
+          "",
+          "Payment options:",
+          ...paymentLinks.map(
+            (link) => `${link.label} (${link.method}): ${link.href}`,
+          ),
+        ]
+      : []),
     "",
     "Thank you,",
     "Visual Square",

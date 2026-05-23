@@ -72,4 +72,17 @@ describe("invoice document helpers", () => {
     expect(html).toContain("$106.63");
     expect(html).toContain("#f57d4b");
   });
+
+  it("includes configured payment links in the email body", () => {
+    const previousStripeLink = process.env.NEXT_PUBLIC_STRIPE_PAYMENT_LINK;
+    process.env.NEXT_PUBLIC_STRIPE_PAYMENT_LINK = "https://pay.example.com";
+
+    const html = buildInvoiceEmailHtml(invoice);
+
+    expect(html).toContain("Payment options");
+    expect(html).toContain("Credit Card");
+    expect(html).toContain("https://pay.example.com");
+
+    process.env.NEXT_PUBLIC_STRIPE_PAYMENT_LINK = previousStripeLink;
+  });
 });

@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Eye, Pencil, Send, Trash2, X } from "lucide-react";
+import Image from "next/image";
+import { ExternalLink, Eye, FileSearch, Pencil, Send, Trash2, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 import {
@@ -19,12 +20,15 @@ import {
   buildInvoiceItemsFromPurchaseOrder,
   type InvoiceLineDraft,
 } from "@/lib/invoice-po-items";
+import { getInvoicePaymentLinks } from "@/lib/payment-links";
 import type {
   InvoiceItemRow,
   InvoiceRow,
   ProjectRow,
   PurchaseOrderRow,
 } from "@/types/database";
+
+import logo from "../../assets/vs-logo-transparent.png";
 
 type InvoiceWithItems = InvoiceRow & {
   invoice_items: InvoiceItemRow[];
@@ -709,6 +713,7 @@ function InvoicePreviewModal({
   const [error, setError] = useState<string | null>(null);
   const recipient = getInvoiceRecipient(invoice);
   const lineItems = buildInvoiceLineItems(invoice);
+  const paymentLinks = getInvoicePaymentLinks();
   const canSend = Boolean(recipient.email);
 
   async function sendInvoice() {
@@ -755,6 +760,15 @@ function InvoicePreviewModal({
             <h2 className="text-lg font-semibold">{invoice.invoice_number}</h2>
           </div>
           <div className="flex items-center gap-2">
+            <a
+              className="ui-button ui-button-secondary h-9 px-3"
+              href={`/api/invoices/${invoice.id}/pdf`}
+              target="_blank"
+              rel="noreferrer"
+            >
+              <FileSearch className="h-4 w-4" aria-hidden="true" />
+              PDF Preview
+            </a>
             <button
               type="button"
               className="ui-button ui-button-secondary h-9 px-3"
@@ -779,11 +793,12 @@ function InvoicePreviewModal({
           <div className="mx-auto max-w-[46rem] border border-[var(--border)] bg-white">
             <header className="grid gap-8 border-b border-[var(--border)] p-8 sm:grid-cols-[minmax(0,1fr)_16rem]">
               <div>
-                <div className="font-serif text-4xl leading-[0.85] tracking-normal text-[var(--foreground)]">
-                  visual
-                  <br />
-                  <span className="text-[var(--coral)]">square</span>
-                </div>
+                <Image
+                  src={logo}
+                  alt="Visual Square"
+                  className="h-24 w-32 object-cover object-center"
+                  priority
+                />
                 <p className="mt-8 ui-label text-[var(--coral)]">Bill To</p>
                 <h3 className="mt-2 text-lg font-semibold">{recipient.name}</h3>
                 <div className="mt-2 space-y-1 text-sm text-[var(--muted)]">
@@ -794,7 +809,7 @@ function InvoicePreviewModal({
               <div className="space-y-4 sm:text-right">
                 <div>
                   <p className="ui-label text-[var(--coral)]">Invoice</p>
-                  <h1 className="mt-2 break-words text-3xl font-semibold">
+                  <h1 className="mt-2 break-words text-base font-semibold">
                     {invoice.invoice_number}
                   </h1>
                 </div>
@@ -823,34 +838,35 @@ function InvoicePreviewModal({
 
             <div className="p-8">
               <div className="overflow-x-auto">
-                <table className="w-full min-w-[34rem] border-collapse text-sm">
-                  <thead>
-                    <tr className="border-y border-[var(--border)] bg-[var(--surface)] text-left ui-label">
-                      <th className="px-3 py-2 font-semibold">Description</th>
-                      <th className="px-3 py-2 text-right font-semibold">Qty</th>
-                      <th className="px-3 py-2 text-right font-semibold">Unit</th>
-                      <th className="px-3 py-2 text-right font-semibold">
-                        Amount
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-[var(--border)]">
+                <div className="min-w-[34rem] text-sm">
+                  <div className="grid grid-cols-[minmax(0,1fr)_5rem_8rem_8rem] border-y border-[var(--border)] bg-[var(--surface)] text-xs font-bold uppercase tracking-[0.08em] text-[var(--muted)]">
+                    <div className="px-3 py-2 font-semibold">Description</div>
+                    <div className="px-3 py-2 text-right font-semibold">Qty</div>
+                    <div className="px-3 py-2 text-right font-semibold">Unit</div>
+                    <div className="px-3 py-2 text-right font-semibold">
+                      Amount
+                    </div>
+                  </div>
+                  <div className="divide-y divide-[var(--border)]">
                     {lineItems.map((item, index) => (
-                      <tr key={`${item.description}-${index}`}>
-                        <td className="px-3 py-3">{item.description}</td>
-                        <td className="px-3 py-3 text-right tabular-nums">
+                      <div
+                        key={`${item.description}-${index}`}
+                        className="grid grid-cols-[minmax(0,1fr)_5rem_8rem_8rem] items-start"
+                      >
+                        <div className="px-3 py-3">{item.description}</div>
+                        <div className="px-3 py-3 text-right tabular-nums">
                           {item.quantity}
-                        </td>
-                        <td className="px-3 py-3 text-right tabular-nums">
+                        </div>
+                        <div className="px-3 py-3 text-right tabular-nums">
                           {formatCurrency(item.unitPrice)}
-                        </td>
-                        <td className="px-3 py-3 text-right font-semibold tabular-nums">
+                        </div>
+                        <div className="px-3 py-3 text-right font-semibold tabular-nums">
                           {formatCurrency(item.amount)}
-                        </td>
-                      </tr>
+                        </div>
+                      </div>
                     ))}
-                  </tbody>
-                </table>
+                  </div>
+                </div>
               </div>
 
               <div className="mt-8 flex justify-end">
@@ -877,6 +893,35 @@ function InvoicePreviewModal({
               </div>
 
               <footer className="mt-10 border-t border-[var(--border)] pt-5 text-sm text-[var(--muted)]">
+                {paymentLinks.length > 0 ? (
+                  <div className="mb-8">
+                    <p className="ui-label text-[var(--coral)]">
+                      Payment Options
+                    </p>
+                    <div className="mt-3 grid gap-2 sm:grid-cols-3">
+                      {paymentLinks.map((link) => (
+                        <a
+                          key={link.key}
+                          href={link.href}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="group border border-[var(--border)] bg-white px-3 py-3 text-[var(--foreground)] transition-colors hover:border-[var(--coral)] hover:bg-[var(--coral-quiet)]"
+                        >
+                          <span className="flex items-center justify-between gap-2 text-sm font-semibold">
+                            {link.label}
+                            <ExternalLink
+                              className="h-3.5 w-3.5 text-[var(--muted)] group-hover:text-[var(--coral)]"
+                              aria-hidden="true"
+                            />
+                          </span>
+                          <span className="mt-1 block text-xs text-[var(--muted)]">
+                            {link.method}
+                          </span>
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
                 Thank you for your business.
               </footer>
             </div>

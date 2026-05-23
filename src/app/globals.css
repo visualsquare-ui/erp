@@ -1,4 +1,8 @@
 @import "tailwindcss";
+@source not "../../assets";
+@source not "../../*.png";
+@source not "../../*.jpg";
+@source not "../../.next";
 
 :root {
   --background: #ffffff;
