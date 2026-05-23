@@ -15,7 +15,10 @@ import {
 } from "@/app/actions";
 import { EmptyState } from "@/components/empty-state";
 import { ListActionButton } from "@/components/list-action-button";
-import { buildVendorBillDisplayNumbers } from "@/lib/document-numbering";
+import {
+  buildPurchaseOrderDisplayNumbers,
+  buildVendorBillDisplayNumbers,
+} from "@/lib/document-numbering";
 import { toNumber } from "@/lib/erp-calculations";
 import { formatCurrency, formatUsDate } from "@/lib/format";
 import { createClient as createBrowserSupabaseClient } from "@/lib/supabase/client";
@@ -182,6 +185,7 @@ export function PurchasingManagement({
   const [deletedOrder, setDeletedOrder] = useState<PurchaseOrderRow | null>(
     null,
   );
+  const poDisplayNumbers = buildPurchaseOrderDisplayNumbers(purchaseOrders);
   const billDisplayNumbers = buildVendorBillDisplayNumbers(bills);
 
   function closeOrderForm() {
@@ -302,7 +306,7 @@ export function PurchasingManagement({
           <div className="flex flex-col justify-between gap-2 border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm sm:flex-row sm:items-center">
             <p className="text-[var(--muted)]">
               <span className="font-semibold text-[var(--foreground)]">
-                {deletedOrder.po_number}
+                {poDisplayNumbers.get(deletedOrder.id) ?? deletedOrder.po_number}
               </span>{" "}
               삭제됨
             </p>
@@ -326,7 +330,7 @@ export function PurchasingManagement({
             {purchaseOrders.map((order) => (
               <DocumentRow
                 key={order.id}
-                title={order.po_number}
+                title={poDisplayNumbers.get(order.id) ?? order.po_number}
                 meta={[
                   order.projects?.name ?? "-",
                   order.vendors?.name ?? "-",
@@ -364,6 +368,7 @@ export function PurchasingManagement({
             vendors={vendors}
             projects={projects}
             purchaseOrders={purchaseOrders}
+            poDisplayNumbers={poDisplayNumbers}
             bill={editingBill ?? undefined}
             onCancel={closeBillForm}
             onSaved={closeBillForm}
@@ -560,16 +565,7 @@ function PurchaseOrderForm({
           </select>
         </Field>
       </div>
-      <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_9rem_10rem]">
-        <Field label="PO Number">
-          <input
-            className="ui-input"
-            name="po_number"
-            placeholder="PO-1001..."
-            autoComplete="off"
-            defaultValue={order?.po_number ?? ""}
-          />
-        </Field>
+      <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_10rem]">
         <Field label="PO Date">
           <input
             className="ui-input"
@@ -745,6 +741,7 @@ function VendorBillForm({
   vendors,
   projects,
   purchaseOrders,
+  poDisplayNumbers,
   bill,
   onCancel,
   onSaved,
@@ -753,6 +750,7 @@ function VendorBillForm({
   vendors: VendorRow[];
   projects: ProjectRow[];
   purchaseOrders: PurchaseOrderRow[];
+  poDisplayNumbers: Map<string, string>;
   bill?: VendorBillRow;
   onCancel: () => void;
   onSaved: () => void;
@@ -859,7 +857,9 @@ function VendorBillForm({
           <option value="">Select PO</option>
           {purchaseOrders.map((purchaseOrder) => (
             <option key={purchaseOrder.id} value={purchaseOrder.id}>
-              {purchaseOrder.po_number} · {purchaseOrder.projects?.name ?? "-"} ·{" "}
+              {poDisplayNumbers.get(purchaseOrder.id) ??
+                purchaseOrder.po_number}{" "}
+              · {purchaseOrder.projects?.name ?? "-"} ·{" "}
               {formatCurrency(toNumber(purchaseOrder.amount))}
             </option>
           ))}

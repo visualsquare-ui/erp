@@ -7,6 +7,13 @@ type BillForNumbering = {
   vendors?: { name: string } | null;
 };
 
+type PurchaseOrderForNumbering = {
+  id: string;
+  po_number: string;
+  order_date: string;
+  created_at: string;
+};
+
 export function getDateNumberToken(dateValue: string) {
   const [year, month, day] = dateValue.slice(0, 10).split("-");
 
@@ -42,6 +49,47 @@ export function buildGeneratedVendorBillNumber({
   return `${getVendorCode(vendorName)}-${getDateNumberToken(receivedDate)}-${sequenceToken(
     sequence,
   )}`;
+}
+
+export function buildGeneratedPurchaseOrderNumber({
+  orderDate,
+  sequence,
+}: {
+  orderDate: string;
+  sequence: number;
+}) {
+  return `PO-${getDateNumberToken(orderDate)}-${sequenceToken(sequence)}`;
+}
+
+export function isGeneratedPurchaseOrderNumber(value: string) {
+  return /^PO-\d{8}-\d{2}$/.test(value.trim());
+}
+
+export function buildPurchaseOrderDisplayNumbers(
+  purchaseOrders: PurchaseOrderForNumbering[],
+) {
+  const displayNumbers = new Map<string, string>();
+  const generatedSequences = new Map<string, number>();
+  const sortedOrders = [...purchaseOrders].sort((first, second) => {
+    const createdCompare = first.created_at.localeCompare(second.created_at);
+
+    return createdCompare || first.id.localeCompare(second.id);
+  });
+
+  sortedOrders.forEach((order) => {
+    const key = getDateNumberToken(order.order_date);
+    const sequence = (generatedSequences.get(key) ?? 0) + 1;
+    generatedSequences.set(key, sequence);
+    displayNumbers.set(
+      order.id,
+      buildGeneratedPurchaseOrderNumber({
+        orderDate: order.order_date,
+        sequence,
+      }),
+    );
+  });
+
+  return displayNumbers;
 }
 
 export function buildVendorBillDisplayNumbers(bills: BillForNumbering[]) {

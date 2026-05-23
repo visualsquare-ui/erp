@@ -10,6 +10,7 @@ import {
   toNumber,
 } from "@/lib/erp-calculations";
 import {
+  buildGeneratedPurchaseOrderNumber,
   buildGeneratedVendorBillNumber,
   getDateNumberToken,
   getVendorCode,
@@ -217,6 +218,38 @@ async function generateVendorBillNumber({
   return buildGeneratedVendorBillNumber({
     vendorName,
     receivedDate,
+    sequence,
+  });
+}
+
+async function generatePurchaseOrderNumber({
+  supabase,
+  orderDate,
+  currentOrderId,
+}: {
+  supabase: AuthedSupabaseClient;
+  orderDate: string;
+  currentOrderId?: string | null;
+}) {
+  const { data: existingOrders } = await supabase
+    .from("purchase_orders")
+    .select("id,po_number")
+    .eq("order_date", orderDate);
+  const comparableOrders = (existingOrders ?? []).filter(
+    (order) => order.id !== currentOrderId,
+  );
+  const prefix = `PO-${getDateNumberToken(orderDate)}`;
+  const maxGeneratedSequence = comparableOrders.reduce((max, order) => {
+    const suffix = String(order.po_number ?? "").match(
+      new RegExp(`^${prefix}-(\\d{2})$`),
+    )?.[1];
+
+    return Math.max(max, suffix ? Number(suffix) : 0);
+  }, 0);
+  const sequence = Math.max(maxGeneratedSequence, comparableOrders.length) + 1;
+
+  return buildGeneratedPurchaseOrderNumber({
+    orderDate,
     sequence,
   });
 }
@@ -508,11 +541,15 @@ export async function createPurchaseOrderAction(formData: FormData) {
   const returnPath = text(formData, "return_path") ?? "/purchasing";
   const orderItems = parsePurchaseOrderItems(formData);
   const { supabase } = await getAuthedSupabase(returnPath);
+  const orderDate = text(formData, "order_date") ?? todayIso();
+  const poNumber =
+    text(formData, "po_number") ??
+    (await generatePurchaseOrderNumber({ supabase, orderDate }));
   const { error } = await supabase.from("purchase_orders").insert({
     project_id: projectId,
     vendor_id: text(formData, "vendor_id"),
-    po_number: text(formData, "po_number") ?? `PO-${Date.now()}`,
-    order_date: text(formData, "order_date") ?? todayIso(),
+    po_number: poNumber,
+    order_date: orderDate,
     expected_date: text(formData, "expected_date"),
     spec: orderItems.spec,
     amount: orderItems.total,
@@ -541,13 +578,21 @@ export async function updatePurchaseOrderAction(formData: FormData) {
 
   const orderItems = parsePurchaseOrderItems(formData);
   const { supabase } = await getAuthedSupabase("/purchasing");
+  const orderDate = text(formData, "order_date") ?? todayIso();
+  const poNumber =
+    text(formData, "po_number") ??
+    (await generatePurchaseOrderNumber({
+      supabase,
+      orderDate,
+      currentOrderId: orderId,
+    }));
   const { error } = await supabase
     .from("purchase_orders")
     .update({
       project_id: projectId,
       vendor_id: text(formData, "vendor_id"),
-      po_number: text(formData, "po_number") ?? `PO-${Date.now()}`,
-      order_date: text(formData, "order_date") ?? todayIso(),
+      po_number: poNumber,
+      order_date: orderDate,
       expected_date: text(formData, "expected_date"),
       spec: orderItems.spec,
       amount: orderItems.total,

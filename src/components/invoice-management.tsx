@@ -13,6 +13,7 @@ import {
 import { EmptyState } from "@/components/empty-state";
 import { ListActionButton } from "@/components/list-action-button";
 import { StatusBadge } from "@/components/status-badge";
+import { buildPurchaseOrderDisplayNumbers } from "@/lib/document-numbering";
 import { toNumber } from "@/lib/erp-calculations";
 import { formatCurrency, formatUsDate } from "@/lib/format";
 import { buildInvoiceLineItems, getInvoiceRecipient } from "@/lib/invoice-document";
@@ -235,6 +236,7 @@ function InvoiceForm({
   const availablePurchaseOrders = purchaseOrders.filter(
     (purchaseOrder) => !projectId || purchaseOrder.project_id === projectId,
   );
+  const poDisplayNumbers = buildPurchaseOrderDisplayNumbers(purchaseOrders);
   const clients = getClientOptions(projects);
   const subtotal = items.reduce(
     (sum, item) => sum + toNumber(item.quantity) * toNumber(item.unitPrice),
@@ -429,7 +431,8 @@ function InvoiceForm({
                 />
                 <span className="min-w-0">
                   <span className="block font-semibold text-[var(--foreground)]">
-                    {purchaseOrder.po_number}
+                    {poDisplayNumbers.get(purchaseOrder.id) ??
+                      purchaseOrder.po_number}
                   </span>
                   <span className="mt-0.5 block text-xs text-[var(--muted)]">
                     {purchaseOrder.projects?.name ?? "-"} ·{" "}

@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  buildGeneratedPurchaseOrderNumber,
+  buildPurchaseOrderDisplayNumbers,
   buildGeneratedVendorBillNumber,
   buildVendorBillDisplayNumbers,
   getVendorCode,
@@ -21,6 +23,42 @@ describe("document numbering", () => {
         sequence: 1,
       }),
     ).toBe("BDOP-05222026-01");
+  });
+
+  it("builds generated PO numbers from order date and sequence", () => {
+    expect(
+      buildGeneratedPurchaseOrderNumber({
+        orderDate: "2026-05-22",
+        sequence: 1,
+      }),
+    ).toBe("PO-05222026-01");
+  });
+
+  it("displays generated PO numbers for old non-standard PO values", () => {
+    const displayNumbers = buildPurchaseOrderDisplayNumbers([
+      {
+        id: "po-1",
+        po_number: "PO-20260511",
+        order_date: "2026-05-23",
+        created_at: "2026-05-23T10:00:00Z",
+      },
+      {
+        id: "po-2",
+        po_number: "PO-05232026-01",
+        order_date: "2026-05-23",
+        created_at: "2026-05-23T11:00:00Z",
+      },
+      {
+        id: "po-3",
+        po_number: "PO-1779552778406",
+        order_date: "2026-05-23",
+        created_at: "2026-05-23T12:00:00Z",
+      },
+    ]);
+
+    expect(displayNumbers.get("po-1")).toBe("PO-05232026-01");
+    expect(displayNumbers.get("po-2")).toBe("PO-05232026-02");
+    expect(displayNumbers.get("po-3")).toBe("PO-05232026-03");
   });
 
   it("displays generated bill numbers instead of ids for bills without numbers", () => {
