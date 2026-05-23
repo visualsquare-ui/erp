@@ -438,6 +438,34 @@ function DetailLine({
   );
 }
 
+function ClientActionButton({
+  children,
+  icon,
+  tone = "neutral",
+  onClick,
+}: {
+  children: React.ReactNode;
+  icon: React.ReactNode;
+  tone?: "neutral" | "danger";
+  onClick: () => void;
+}) {
+  const toneClass =
+    tone === "danger"
+      ? "text-[#8a2f1e] hover:border-[#d8c2bd] hover:bg-[#fff4f1] hover:text-[#6f2417] focus-visible:outline-[#8a2f1e]"
+      : "text-[var(--muted)] hover:border-[var(--border-strong)] hover:bg-white hover:text-[var(--foreground)] focus-visible:outline-[var(--coral)]";
+
+  return (
+    <button
+      type="button"
+      className={`inline-flex h-7 items-center gap-1 border border-transparent px-2 text-xs font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 ${toneClass}`}
+      onClick={onClick}
+    >
+      {icon}
+      {children}
+    </button>
+  );
+}
+
 export function ClientManagement({
   clients,
 }: {
@@ -538,7 +566,7 @@ export function ClientManagement({
             return (
               <article
                 key={client.id}
-                className="grid gap-4 border-b border-[var(--border)] p-5 last:border-b-0 md:grid-cols-[minmax(0,1fr)_180px]"
+                className="grid gap-4 border-b border-[var(--border)] p-5 last:border-b-0 md:grid-cols-[minmax(0,1fr)_10rem]"
               >
                 <div className="min-w-0">
                   <h3 className="break-words font-semibold">
@@ -561,46 +589,45 @@ export function ClientManagement({
                     </p>
                   ) : null}
                 </div>
-                <div className="grid grid-cols-3 gap-2 text-sm md:grid-cols-1">
-                  <div>
-                    <p className="text-xs text-[var(--muted)]">Projects</p>
-                    <p className="font-semibold tabular-nums">
-                      {client.projects.length}
-                    </p>
+                <div className="flex flex-col gap-4 md:items-end md:justify-between">
+                  <div className="grid w-full grid-cols-3 gap-2 text-sm md:w-auto md:min-w-28 md:grid-cols-1 md:gap-3">
+                    <div>
+                      <p className="text-xs text-[var(--muted)]">Projects</p>
+                      <p className="font-semibold tabular-nums">
+                        {client.projects.length}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-[var(--muted)]">Revenue</p>
+                      <p className="font-semibold tabular-nums">
+                        {formatCurrency(revenue)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-[var(--muted)]">AR</p>
+                      <p className="font-semibold tabular-nums">
+                        {formatCurrency(outstanding)}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-xs text-[var(--muted)]">Revenue</p>
-                    <p className="font-semibold tabular-nums">
-                      {formatCurrency(revenue)}
-                    </p>
+                  <div className="flex justify-end gap-1 border-t border-[var(--border)] pt-2 md:w-full">
+                    <ClientActionButton
+                      icon={<Pencil className="h-3.5 w-3.5" aria-hidden="true" />}
+                      onClick={() => {
+                        setEditingClient(client);
+                        setFormMode("edit");
+                      }}
+                    >
+                      수정
+                    </ClientActionButton>
+                    <ClientActionButton
+                      icon={<Trash2 className="h-3.5 w-3.5" aria-hidden="true" />}
+                      tone="danger"
+                      onClick={() => void deleteClient(client.id)}
+                    >
+                      삭제
+                    </ClientActionButton>
                   </div>
-                  <div>
-                    <p className="text-xs text-[var(--muted)]">AR</p>
-                    <p className="font-semibold tabular-nums">
-                      {formatCurrency(outstanding)}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex flex-wrap justify-end gap-2 md:col-span-2">
-                  <button
-                    type="button"
-                    className="inline-flex min-h-8 items-center border border-[var(--border-strong)] bg-white px-2.5 text-xs font-semibold text-[var(--foreground)] transition hover:border-[var(--coral)] hover:bg-[var(--coral-quiet)] hover:text-[var(--coral-strong)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--coral)]"
-                    onClick={() => {
-                      setEditingClient(client);
-                      setFormMode("edit");
-                    }}
-                  >
-                    <Pencil className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" />
-                    수정
-                  </button>
-                  <button
-                    type="button"
-                    className="inline-flex min-h-8 items-center border border-[#d8c2bd] bg-white px-2.5 text-xs font-semibold text-[#8a2f1e] transition hover:border-[#8a2f1e] hover:bg-[#f8e8e4] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#8a2f1e]"
-                    onClick={() => void deleteClient(client.id)}
-                  >
-                    <Trash2 className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" />
-                    삭제
-                  </button>
                 </div>
               </article>
             );
