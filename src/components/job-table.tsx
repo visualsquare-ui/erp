@@ -1,4 +1,7 @@
+import { Pencil, Trash2 } from "lucide-react";
+
 import { EmptyState } from "@/components/empty-state";
+import { ListActionButton } from "@/components/list-action-button";
 import { toNumber } from "@/lib/erp-calculations";
 import { formatCurrency, formatUsDate } from "@/lib/format";
 import type { ProjectType } from "@/lib/project-rules";
@@ -16,9 +19,11 @@ const typeLabels: Record<ProjectType, string> = {
 
 type JobTableProps = {
   jobs: JobRow[];
+  onEdit?: (job: JobRow) => void;
+  onDelete?: (job: JobRow) => void;
 };
 
-export function JobTable({ jobs }: JobTableProps) {
+export function JobTable({ jobs, onEdit, onDelete }: JobTableProps) {
   if (jobs.length === 0) {
     return (
       <EmptyState
@@ -40,6 +45,9 @@ export function JobTable({ jobs }: JobTableProps) {
             <th>상태</th>
             <th>마감</th>
             <th className="text-right">견적</th>
+            {onEdit || onDelete ? (
+              <th className="w-28 text-right">관리</th>
+            ) : null}
           </tr>
         </thead>
         <tbody>
@@ -69,6 +77,33 @@ export function JobTable({ jobs }: JobTableProps) {
               <td className="text-right font-semibold tabular-nums">
                 {formatCurrency(toNumber(job.quote_amount))}
               </td>
+              {onEdit || onDelete ? (
+                <td>
+                  <div className="flex justify-end gap-1">
+                    {onEdit ? (
+                      <ListActionButton
+                        icon={
+                          <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
+                        }
+                        onClick={() => onEdit(job)}
+                      >
+                        수정
+                      </ListActionButton>
+                    ) : null}
+                    {onDelete ? (
+                      <ListActionButton
+                        icon={
+                          <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+                        }
+                        tone="danger"
+                        onClick={() => onDelete(job)}
+                      >
+                        삭제
+                      </ListActionButton>
+                    ) : null}
+                  </div>
+                </td>
+              ) : null}
             </tr>
           ))}
         </tbody>

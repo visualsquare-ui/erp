@@ -217,6 +217,64 @@ export async function createJobAction(formData: FormData) {
   revalidatePath("/");
 }
 
+export async function updateJobAction(formData: FormData) {
+  const jobId = text(formData, "job_id");
+  const clientId = text(formData, "client_id");
+
+  if (!jobId) {
+    return;
+  }
+
+  if (!clientId) {
+    throw new Error("Job을 수정하려면 Client를 선택해야 합니다.");
+  }
+
+  const { supabase } = await getAuthedSupabase("/jobs");
+  const { error } = await supabase
+    .from("jobs")
+    .update({
+      client_id: clientId,
+      project_id: text(formData, "project_id"),
+      name: text(formData, "name") ?? "Untitled job",
+      type: (text(formData, "type") ?? "print") as ProjectType,
+      status: (text(formData, "status") ?? "quote") as ProjectStatus,
+      start_date: text(formData, "start_date"),
+      due_date: text(formData, "due_date"),
+      description: text(formData, "description"),
+      quote_amount: money(formData, "quote_amount"),
+    })
+    .eq("id", jobId);
+
+  if (error) {
+    throw new Error(`Job 수정 실패: ${error.message}`);
+  }
+
+  revalidatePath("/jobs");
+  revalidatePath("/purchasing");
+  revalidatePath("/clients");
+  revalidatePath("/");
+}
+
+export async function deleteJobAction(formData: FormData) {
+  const jobId = text(formData, "job_id");
+
+  if (!jobId) {
+    return;
+  }
+
+  const { supabase } = await getAuthedSupabase("/jobs");
+  const { error } = await supabase.from("jobs").delete().eq("id", jobId);
+
+  if (error) {
+    throw new Error(`Job 삭제 실패: ${error.message}`);
+  }
+
+  revalidatePath("/jobs");
+  revalidatePath("/purchasing");
+  revalidatePath("/clients");
+  revalidatePath("/");
+}
+
 export async function createTaskAction(formData: FormData) {
   const projectId = String(formData.get("project_id"));
   const { supabase } = await getAuthedSupabase(`/projects/${projectId}`);
