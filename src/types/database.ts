@@ -106,7 +106,7 @@ export type AssetRow = {
 
 export type InvoiceRow = {
   id: string;
-  project_id: string;
+  project_id: string | null;
   client_id: string;
   invoice_number: string;
   issue_date: string;

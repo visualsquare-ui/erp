@@ -123,7 +123,9 @@ export function InvoiceManagement({
 
     const formData = new FormData();
     formData.set("invoice_id", invoice.id);
-    formData.set("project_id", invoice.project_id);
+    if (invoice.project_id) {
+      formData.set("project_id", invoice.project_id);
+    }
     await deleteInvoiceAction(formData);
 
     if (editingInvoice?.id === invoice.id) {
@@ -365,11 +367,10 @@ function InvoiceForm({
           <select
             className="ui-input"
             name="project_id"
-            required
             value={projectId}
             onChange={(event) => selectProject(event.target.value)}
           >
-            <option value="">Project</option>
+            <option value="">No project</option>
             {projects.map((project) => (
               <option key={project.id} value={project.id}>
                 {project.name}
@@ -646,7 +647,7 @@ function InvoiceRowCard({
         </div>
         <p className="mt-1 break-words text-sm text-[var(--muted)]">
           {invoice.clients?.company_name ?? invoice.clients?.name} ·{" "}
-          {invoice.projects?.name}
+          {invoice.projects?.name ?? "No project"}
         </p>
         <p className="mt-2 text-xs text-[var(--muted)]">
           Issue {formatUsDate(invoice.issue_date)} · Due{" "}

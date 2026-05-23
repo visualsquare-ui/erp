@@ -16,6 +16,7 @@ import {
   getVendorCode,
 } from "@/lib/document-numbering";
 import { addPaymentTermDays, type PaymentTerms } from "@/lib/format";
+import { optionalFormText } from "@/lib/form-values";
 import { getAuthedSupabase } from "@/lib/erp-data";
 import type { ProjectType } from "@/lib/project-rules";
 import { getInvoiceItemSchemaHint } from "@/lib/supabase-schema-errors";
@@ -834,7 +835,7 @@ export async function deleteVendorBillAction(formData: FormData) {
 }
 
 export async function createInvoiceAction(formData: FormData) {
-  const projectId = String(formData.get("project_id"));
+  const projectId = optionalFormText(formData, "project_id");
   const returnPath = text(formData, "return_path") ?? "/invoices";
   const issueDate = text(formData, "issue_date") ?? todayIso();
   const terms = (text(formData, "terms") ?? "net_30") as PaymentTerms;
@@ -904,13 +905,15 @@ export async function createInvoiceAction(formData: FormData) {
   }
 
   revalidatePath("/invoices");
-  revalidatePath(`/projects/${projectId}`);
+  if (projectId) {
+    revalidatePath(`/projects/${projectId}`);
+  }
   revalidatePath("/");
 }
 
 export async function updateInvoiceAction(formData: FormData) {
   const invoiceId = text(formData, "invoice_id");
-  const projectId = String(formData.get("project_id"));
+  const projectId = optionalFormText(formData, "project_id");
   const issueDate = text(formData, "issue_date") ?? todayIso();
   const terms = (text(formData, "terms") ?? "net_30") as PaymentTerms;
   const invoiceItems = parseInvoiceItems(formData);
@@ -983,7 +986,9 @@ export async function updateInvoiceAction(formData: FormData) {
   }
 
   revalidatePath("/invoices");
-  revalidatePath(`/projects/${projectId}`);
+  if (projectId) {
+    revalidatePath(`/projects/${projectId}`);
+  }
   revalidatePath("/");
 }
 
