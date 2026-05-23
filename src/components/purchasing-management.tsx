@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Pencil, Plus, Trash2 } from "lucide-react";
+import { Paperclip, Pencil, Plus, Trash2 } from "lucide-react";
 
 import {
   createPurchaseOrderAction,
@@ -16,6 +16,7 @@ import { EmptyState } from "@/components/empty-state";
 import { ListActionButton } from "@/components/list-action-button";
 import { toNumber } from "@/lib/erp-calculations";
 import { formatCurrency, formatUsDate } from "@/lib/format";
+import { createClient as createBrowserSupabaseClient } from "@/lib/supabase/client";
 import type {
   ClientRow,
   ProjectRow,
@@ -38,6 +39,58 @@ type PurchaseOrderItem = {
   unitPrice: string;
   qty: string;
 };
+
+const VENDOR_BILL_BUCKET = "vendor-bills";
+
+function isVendorBillFile(file: File) {
+  return (
+    file.type === "application/pdf" ||
+    file.type === "image/jpeg" ||
+    /\.(pdf|jpe?g)$/i.test(file.name)
+  );
+}
+
+function buildVendorBillFilePath(file: File) {
+  const safeName =
+    file.name.replace(/[^a-zA-Z0-9._-]/g, "-") ||
+    (file.type === "application/pdf" ? "vendor-bill.pdf" : "vendor-bill.jpg");
+
+  return `${todayInputValue()}/${crypto.randomUUID()}-${safeName}`;
+}
+
+function getBillFileName(fileReference: string) {
+  const rawName = fileReference.startsWith("http")
+    ? new URL(fileReference).pathname.split("/").pop()
+    : fileReference.split("/").pop();
+
+  return decodeURIComponent(rawName ?? "Bill file").replace(
+    /^[0-9a-f-]{36}-/i,
+    "",
+  );
+}
+
+async function openVendorBillFile(fileReference: string) {
+  if (!fileReference) {
+    return;
+  }
+
+  if (fileReference.startsWith("http")) {
+    window.open(fileReference, "_blank", "noopener,noreferrer");
+    return;
+  }
+
+  const supabase = createBrowserSupabaseClient();
+  const { data, error } = await supabase.storage
+    .from(VENDOR_BILL_BUCKET)
+    .createSignedUrl(fileReference, 60);
+
+  if (error || !data?.signedUrl) {
+    window.alert("파일을 열 수 없습니다. Storage 권한을 확인해 주세요.");
+    return;
+  }
+
+  window.open(data.signedUrl, "_blank", "noopener,noreferrer");
+}
 
 function parsePurchaseOrderItems(order?: PurchaseOrderRow): PurchaseOrderItem[] {
   if (!order) {
@@ -283,6 +336,7 @@ export function PurchasingManagement({
                 ].join(" · ")}
                 amount={formatCurrency(toNumber(bill.amount))}
                 status={bill.status}
+                fileUrl={bill.file_url ?? undefined}
                 onEdit={() => {
                   setEditingBill(bill);
                   setBillMode("edit");
@@ -600,6 +654,12 @@ function VendorBillForm({
   const [projectId, setProjectId] = useState(bill?.project_id ?? "");
   const [vendorId, setVendorId] = useState(bill?.vendor_id ?? "");
   const [amount, setAmount] = useState(bill ? String(toNumber(bill.amount)) : "");
+  const [fileReference, setFileReference] = useState(bill?.file_url ?? "");
+  const [fileName, setFileName] = useState(
+    bill?.file_url ? getBillFileName(bill.file_url) : "",
+  );
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState("");
   const selectedPurchaseOrder =
     purchaseOrders.find((order) => order.id === selectedPurchaseOrderId) ?? null;
   const selectedPurchaseOrderItems = parsePurchaseOrderItems(
@@ -619,6 +679,37 @@ function VendorBillForm({
     setProjectId(purchaseOrder.project_id);
     setVendorId(purchaseOrder.vendor_id);
     setAmount(String(toNumber(purchaseOrder.amount)));
+  }
+
+  async function uploadBillFile(file: File) {
+    setUploadError("");
+
+    if (!isVendorBillFile(file)) {
+      setUploadError("PDF 또는 JPG 파일만 첨부할 수 있습니다.");
+      return;
+    }
+
+    setIsUploading(true);
+    const path = buildVendorBillFilePath(file);
+    const supabase = createBrowserSupabaseClient();
+    const { error } = await supabase.storage
+      .from(VENDOR_BILL_BUCKET)
+      .upload(path, file, {
+        contentType: file.type || undefined,
+        upsert: false,
+      });
+
+    setIsUploading(false);
+
+    if (error) {
+      setUploadError(
+        "업로드에 실패했습니다. Supabase Storage bucket과 policy가 적용됐는지 확인해 주세요.",
+      );
+      return;
+    }
+
+    setFileReference(path);
+    setFileName(file.name);
   }
 
   async function submit(formData: FormData) {
@@ -643,9 +734,9 @@ function VendorBillForm({
           <input type="hidden" name="vendor_bill_id" value={bill.id} />
           <input type="hidden" name="received_date" value={bill.received_date} />
           <input type="hidden" name="paid_date" value={bill.paid_date ?? ""} />
-          <input type="hidden" name="file_url" value={bill.file_url ?? ""} />
         </>
       ) : null}
+      <input type="hidden" name="file_url" value={fileReference} />
 
       <Field label="PO">
         <select
@@ -761,6 +852,83 @@ function VendorBillForm({
           defaultValue={bill?.due_date ?? ""}
         />
       </Field>
+      <section className="space-y-2">
+        <div className="flex items-center justify-between gap-3 border-b border-[var(--border)] pb-2">
+          <h3 className="ui-label">Bill File</h3>
+          {fileReference ? (
+            <button
+              type="button"
+              className="inline-flex h-7 items-center gap-1 border border-transparent px-2 text-xs font-semibold text-[var(--muted)] transition-colors hover:border-[var(--border-strong)] hover:bg-white hover:text-[var(--foreground)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--coral)]"
+              onClick={() => void openVendorBillFile(fileReference)}
+            >
+              <Paperclip className="h-3.5 w-3.5" aria-hidden="true" />
+              열기
+            </button>
+          ) : null}
+        </div>
+        <div className="border border-[var(--border)] bg-white px-3 py-3">
+          <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+            <div>
+              <p className="text-sm font-semibold text-[var(--foreground)]">
+                PDF 또는 JPG 첨부
+              </p>
+              <p className="mt-1 text-xs text-[var(--muted)]">
+                벤더에게 받은 원본 Bill 파일을 저장합니다.
+              </p>
+            </div>
+            <label className="inline-flex h-8 cursor-pointer items-center justify-center border border-[var(--border-strong)] bg-white px-3 text-xs font-semibold text-[var(--foreground)] transition-colors hover:border-[var(--coral)] hover:bg-[var(--coral-quiet)] hover:text-[var(--coral-strong)] focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[var(--coral)]">
+              파일 선택
+              <input
+                className="sr-only"
+                type="file"
+                accept="application/pdf,image/jpeg,.pdf,.jpg,.jpeg"
+                disabled={isUploading}
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+
+                  if (file) {
+                    void uploadBillFile(file);
+                  }
+
+                  event.target.value = "";
+                }}
+              />
+            </label>
+          </div>
+          {fileReference ? (
+            <div className="mt-3 flex flex-col justify-between gap-2 border-t border-[var(--border)] pt-3 text-xs sm:flex-row sm:items-center">
+              <p className="inline-flex min-w-0 items-center gap-1 text-[var(--muted)]">
+                <Paperclip
+                  className="h-3.5 w-3.5 shrink-0"
+                  aria-hidden="true"
+                />
+                <span className="truncate">{fileName || "Bill file"}</span>
+              </p>
+              <button
+                type="button"
+                className="self-start font-semibold text-[var(--muted)] transition-colors hover:text-[var(--coral-strong)] sm:self-auto"
+                onClick={() => {
+                  setFileReference("");
+                  setFileName("");
+                  setUploadError("");
+                }}
+              >
+                첨부 제거
+              </button>
+            </div>
+          ) : null}
+          {isUploading ? (
+            <p className="mt-3 text-xs font-semibold text-[var(--muted)]">
+              업로드 중...
+            </p>
+          ) : null}
+          {uploadError ? (
+            <p className="mt-3 text-xs font-semibold text-[#8a2f1e]">
+              {uploadError}
+            </p>
+          ) : null}
+        </div>
+      </section>
       <button className="ui-button ui-button-secondary w-full">
         {mode === "edit" ? "변경 저장" : "빌 저장"}
       </button>
@@ -802,6 +970,7 @@ function DocumentRow({
   meta,
   amount,
   status,
+  fileUrl,
   onEdit,
   onDelete,
 }: {
@@ -809,6 +978,7 @@ function DocumentRow({
   meta: string;
   amount: string;
   status: string;
+  fileUrl?: string;
   onEdit: () => void;
   onDelete: () => void;
 }) {
@@ -822,6 +992,16 @@ function DocumentRow({
           </span>
         </div>
         <p className="mt-1 break-words text-xs text-[var(--muted)]">{meta}</p>
+        {fileUrl ? (
+          <button
+            type="button"
+            className="mt-2 inline-flex h-7 items-center gap-1 border border-[var(--border-strong)] bg-white px-2 text-xs font-semibold text-[var(--foreground)] transition-colors hover:border-[var(--coral)] hover:bg-[var(--coral-quiet)] hover:text-[var(--coral-strong)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--coral)]"
+            onClick={() => void openVendorBillFile(fileUrl)}
+          >
+            <Paperclip className="h-3.5 w-3.5" aria-hidden="true" />
+            첨부 파일
+          </button>
+        ) : null}
       </div>
       <div className="flex flex-col gap-2 md:items-end">
         <strong className="tabular-nums">{amount}</strong>
