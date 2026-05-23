@@ -6,7 +6,8 @@ import { getInvoicesPageData } from "@/lib/erp-data";
 export const dynamic = "force-dynamic";
 
 export default async function InvoicesPage() {
-  const { user, projects, purchaseOrders, invoices } = await getInvoicesPageData();
+  const { user, clients, projects, purchaseOrders, invoices } =
+    await getInvoicesPageData();
 
   return (
     <AppShell userEmail={user.email ?? "Staff"} activePath="/invoices">
@@ -17,6 +18,7 @@ export default async function InvoicesPage() {
       />
 
       <InvoiceManagement
+        clients={clients}
         projects={projects}
         purchaseOrders={purchaseOrders}
         invoices={invoices}

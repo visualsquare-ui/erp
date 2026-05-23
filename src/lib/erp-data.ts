@@ -229,7 +229,9 @@ export async function getProjectDetailData(id: string) {
 
 export async function getInvoicesPageData() {
   const { user, supabase } = await getAuthedSupabase("/invoices");
-  const [projectsResult, purchaseOrdersResult, invoicesResult] = await Promise.all([
+  const [clientsResult, projectsResult, purchaseOrdersResult, invoicesResult] =
+    await Promise.all([
+    supabase.from("clients").select("*").order("company_name"),
     supabase.from("projects").select("*, clients(company_name, name)").order("name"),
     supabase
       .from("purchase_orders")
@@ -243,6 +245,7 @@ export async function getInvoicesPageData() {
 
   return {
     user,
+    clients: (clientsResult.data ?? []) as ClientRow[],
     projects: (projectsResult.data ?? []) as ProjectRow[],
     purchaseOrders: ((purchaseOrdersResult.data ?? []) as PurchaseOrderRow[]).filter(
       (order) => !isPurchaseOrderDeleted(order),

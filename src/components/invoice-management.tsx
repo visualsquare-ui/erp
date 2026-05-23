@@ -16,6 +16,7 @@ import { StatusBadge } from "@/components/status-badge";
 import { buildPurchaseOrderDisplayNumbers } from "@/lib/document-numbering";
 import { toNumber } from "@/lib/erp-calculations";
 import { formatCurrency, formatUsDate } from "@/lib/format";
+import { getInvoiceClientOptions } from "@/lib/invoice-client-options";
 import { buildInvoiceLineItems, getInvoiceRecipient } from "@/lib/invoice-document";
 import {
   buildInvoiceItemsFromPurchaseOrder,
@@ -23,6 +24,7 @@ import {
 } from "@/lib/invoice-po-items";
 import { getInvoicePaymentLinks } from "@/lib/payment-links";
 import type {
+  ClientRow,
   InvoiceItemRow,
   InvoiceRow,
   ProjectRow,
@@ -36,6 +38,7 @@ type InvoiceWithItems = InvoiceRow & {
 };
 
 type InvoiceManagementProps = {
+  clients: ClientRow[];
   projects: ProjectRow[];
   purchaseOrders: PurchaseOrderRow[];
   invoices: InvoiceWithItems[];
@@ -91,22 +94,8 @@ function buildItemsFromInvoice(invoice: InvoiceWithItems): InvoiceFormItem[] {
   }));
 }
 
-function getClientOptions(projects: ProjectRow[]) {
-  const options = new Map<string, string>();
-
-  projects.forEach((project) => {
-    if (!options.has(project.client_id)) {
-      options.set(
-        project.client_id,
-        project.clients?.company_name ?? project.clients?.name ?? "Client",
-      );
-    }
-  });
-
-  return Array.from(options, ([id, label]) => ({ id, label }));
-}
-
 export function InvoiceManagement({
+  clients,
   projects,
   purchaseOrders,
   invoices,
@@ -167,6 +156,7 @@ export function InvoiceManagement({
         <InvoiceForm
           key={editingInvoice?.id ?? "new-invoice"}
           mode={formMode === "edit" ? "edit" : "create"}
+          clients={clients}
           projects={projects}
           purchaseOrders={purchaseOrders}
           invoice={editingInvoice ?? undefined}
@@ -210,6 +200,7 @@ export function InvoiceManagement({
 
 function InvoiceForm({
   mode,
+  clients,
   projects,
   purchaseOrders,
   invoice,
@@ -217,6 +208,7 @@ function InvoiceForm({
   onSaved,
 }: {
   mode: "create" | "edit";
+  clients: ClientRow[];
   projects: ProjectRow[];
   purchaseOrders: PurchaseOrderRow[];
   invoice?: InvoiceWithItems;
@@ -237,7 +229,7 @@ function InvoiceForm({
     (purchaseOrder) => !projectId || purchaseOrder.project_id === projectId,
   );
   const poDisplayNumbers = buildPurchaseOrderDisplayNumbers(purchaseOrders);
-  const clients = getClientOptions(projects);
+  const clientOptions = getInvoiceClientOptions(clients);
   const subtotal = items.reduce(
     (sum, item) => sum + toNumber(item.quantity) * toNumber(item.unitPrice),
     0,
@@ -394,7 +386,7 @@ function InvoiceForm({
             onChange={(event) => setClientId(event.target.value)}
           >
             <option value="">Client</option>
-            {clients.map((client) => (
+            {clientOptions.map((client) => (
               <option key={client.id} value={client.id}>
                 {client.label}
               </option>
