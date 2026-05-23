@@ -388,9 +388,10 @@ export function PurchasingManagement({
                 status={getVendorBillStatusLabel(bill.status)}
                 statusTone={getVendorBillStatusTone(bill.status)}
                 fileUrl={bill.file_url ?? undefined}
-                paymentActionLabel={
-                  isVendorBillPaid(bill.status) ? "Mark unpaid" : "Mark paid"
-                }
+                paymentToggle={{
+                  checked: isVendorBillPaid(bill.status),
+                  label: "Paid",
+                }}
                 onPaymentAction={() => void updateBillPaymentStatus(bill)}
                 onEdit={() => {
                   setEditingBill(bill);
@@ -1079,7 +1080,7 @@ function DocumentRow({
   status,
   statusTone = "neutral",
   fileUrl,
-  paymentActionLabel,
+  paymentToggle,
   onPaymentAction,
   onEdit,
   onDelete,
@@ -1090,7 +1091,10 @@ function DocumentRow({
   status: string;
   statusTone?: "neutral" | "warning" | "success";
   fileUrl?: string;
-  paymentActionLabel?: string;
+  paymentToggle?: {
+    checked: boolean;
+    label: string;
+  };
   onPaymentAction?: () => void;
   onEdit: () => void;
   onDelete: () => void;
@@ -1102,11 +1106,13 @@ function DocumentRow({
   }[statusTone];
 
   return (
-    <article className="grid gap-3 py-4 text-sm md:grid-cols-[minmax(0,1fr)_9rem]">
+    <article className="grid gap-3 py-4 text-sm lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
       <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-2">
           <h3 className="break-words font-semibold">{title}</h3>
-          <span className={`border px-2 py-0.5 text-xs font-semibold ${statusToneClass}`}>
+          <span
+            className={`border px-2 py-0.5 text-xs font-semibold ${statusToneClass}`}
+          >
             {status}
           </span>
         </div>
@@ -1122,16 +1128,39 @@ function DocumentRow({
           </button>
         ) : null}
       </div>
-      <div className="flex flex-col gap-2 md:items-end">
-        <strong className="tabular-nums">{amount}</strong>
-        <div className="flex justify-end gap-1 border-t border-[var(--border)] pt-2 md:w-full">
-          {paymentActionLabel && onPaymentAction ? (
-            <ListActionButton
-              icon={<span className="h-1.5 w-1.5 bg-current" aria-hidden="true" />}
+      <div className="flex flex-wrap items-center justify-end gap-2 border-t border-[var(--border)] pt-2 lg:border-t-0 lg:pt-0">
+        <strong className="min-w-24 text-right tabular-nums">{amount}</strong>
+        <div className="flex flex-wrap items-center justify-end gap-1">
+          {paymentToggle && onPaymentAction ? (
+            <button
+              type="button"
+              role="switch"
+              aria-checked={paymentToggle.checked}
+              className={`inline-flex h-7 items-center gap-1.5 border px-2 text-xs font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--coral)] ${
+                paymentToggle.checked
+                  ? "border-[var(--success)]/25 bg-[#E9F6EF] text-[var(--success)]"
+                  : "border-[#e7c8a5] bg-[#fff7ed] text-[#8a4a0a]"
+              }`}
               onClick={onPaymentAction}
             >
-              {paymentActionLabel}
-            </ListActionButton>
+              <span
+                className={`h-3 w-5 border p-0.5 ${
+                  paymentToggle.checked
+                    ? "border-[var(--success)] bg-white"
+                    : "border-[#e7c8a5] bg-white"
+                }`}
+                aria-hidden="true"
+              >
+                <span
+                  className={`block h-1.5 w-1.5 transition-transform ${
+                    paymentToggle.checked
+                      ? "translate-x-2 bg-[var(--success)]"
+                      : "translate-x-0 bg-[#8a4a0a]"
+                  }`}
+                />
+              </span>
+              {paymentToggle.label}
+            </button>
           ) : null}
           <ListActionButton
             icon={<Pencil className="h-3.5 w-3.5" aria-hidden="true" />}
