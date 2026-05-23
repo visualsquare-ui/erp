@@ -12,14 +12,14 @@ export default async function ProjectsPage() {
   return (
     <AppShell userEmail={user.email ?? "Staff"} activePath="/projects">
       <PageHeader
-        eyebrow="Projects"
-        title="프로젝트"
-        description="고객, 작업, 산출물, 인보이스, 발주·빌이 모이는 허브입니다."
+        eyebrow="Project Groups"
+        title="프로젝트 그룹"
+        description="브랜딩이나 캠페인처럼 여러 Job을 묶어야 할 때만 사용하는 선택적 그룹입니다."
       />
 
       <section className="grid gap-6 xl:grid-cols-[22rem_minmax(0,1fr)]">
         <form action={createProjectAction} className="ui-panel space-y-4">
-          <h2 className="text-sm font-semibold">프로젝트 추가</h2>
+          <h2 className="text-sm font-semibold">프로젝트 그룹 추가</h2>
           <Field label="Client">
           <select className="ui-input" name="client_id" required>
             <option value="">Client</option>

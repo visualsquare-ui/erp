@@ -3,6 +3,7 @@ import Link from "next/link";
 import {
   BriefcaseBusiness,
   FileText,
+  Folder,
   GalleryHorizontalEnd,
   LayoutDashboard,
   ReceiptText,
@@ -18,9 +19,10 @@ const navItems = [
   { label: "대시보드", href: "/", icon: LayoutDashboard },
   { label: "고객", href: "/clients", icon: UsersRound },
   { label: "벤더", href: "/vendors", icon: Truck },
+  { label: "Jobs", href: "/jobs", icon: BriefcaseBusiness },
   { label: "PO / Bill", href: "/purchasing", icon: ReceiptText },
   { label: "Invoice", href: "/invoices", icon: FileText },
-  { label: "프로젝트", href: "/projects", icon: BriefcaseBusiness },
+  { label: "프로젝트", href: "/projects", icon: Folder },
   { label: "포트폴리오", href: "/portfolio", icon: GalleryHorizontalEnd },
 ];
 

@@ -33,6 +33,7 @@ function todayIso(): string {
 
 type PurchaseOrderItemInput = {
   clientId: string | null;
+  jobId: string | null;
   item: string;
   unitPrice: number;
   qty: number;
@@ -89,6 +90,7 @@ function parsePurchaseOrderItems(formData: FormData): {
 
           return {
             clientId: String(source.clientId ?? "").trim() || null,
+            jobId: String(source.jobId ?? "").trim() || null,
             item: String(source.item ?? "").trim(),
             unitPrice: toNumber(source.unitPrice),
             qty: toNumber(source.qty) || 1,
@@ -183,6 +185,24 @@ export async function createProjectAction(formData: FormData) {
   if (data?.id) {
     redirect(`/projects/${data.id}`);
   }
+}
+
+export async function createJobAction(formData: FormData) {
+  const { supabase } = await getAuthedSupabase("/jobs");
+  await supabase.from("jobs").insert({
+    client_id: text(formData, "client_id"),
+    project_id: text(formData, "project_id"),
+    name: text(formData, "name") ?? "Untitled job",
+    type: (text(formData, "type") ?? "print") as ProjectType,
+    status: (text(formData, "status") ?? "quote") as ProjectStatus,
+    start_date: text(formData, "start_date"),
+    due_date: text(formData, "due_date"),
+    description: text(formData, "description"),
+    quote_amount: money(formData, "quote_amount"),
+  });
+
+  revalidatePath("/jobs");
+  revalidatePath("/");
 }
 
 export async function createTaskAction(formData: FormData) {
@@ -303,7 +323,7 @@ export async function deleteVendorAction(formData: FormData) {
 }
 
 export async function createPurchaseOrderAction(formData: FormData) {
-  const projectId = String(formData.get("project_id"));
+  const projectId = text(formData, "project_id");
   const returnPath = text(formData, "return_path") ?? "/purchasing";
   const orderItems = parsePurchaseOrderItems(formData);
   const { supabase } = await getAuthedSupabase(returnPath);
@@ -318,13 +338,16 @@ export async function createPurchaseOrderAction(formData: FormData) {
     status: text(formData, "status") ?? "ordered",
   });
   revalidatePath("/purchasing");
-  revalidatePath(`/projects/${projectId}`);
+  revalidatePath("/jobs");
+  if (projectId) {
+    revalidatePath(`/projects/${projectId}`);
+  }
   revalidatePath("/");
 }
 
 export async function updatePurchaseOrderAction(formData: FormData) {
   const orderId = text(formData, "purchase_order_id");
-  const projectId = String(formData.get("project_id"));
+  const projectId = text(formData, "project_id");
 
   if (!orderId) {
     return;
@@ -347,7 +370,10 @@ export async function updatePurchaseOrderAction(formData: FormData) {
     .eq("id", orderId);
 
   revalidatePath("/purchasing");
-  revalidatePath(`/projects/${projectId}`);
+  revalidatePath("/jobs");
+  if (projectId) {
+    revalidatePath(`/projects/${projectId}`);
+  }
   revalidatePath("/");
 }
 
@@ -428,7 +454,7 @@ export async function restorePurchaseOrderAction(formData: FormData) {
 }
 
 export async function createVendorBillAction(formData: FormData) {
-  const projectId = String(formData.get("project_id"));
+  const projectId = text(formData, "project_id");
   const returnPath = text(formData, "return_path") ?? "/purchasing";
   const { supabase } = await getAuthedSupabase(returnPath);
   await supabase.from("vendor_bills").insert({
@@ -444,13 +470,16 @@ export async function createVendorBillAction(formData: FormData) {
     file_url: text(formData, "file_url"),
   });
   revalidatePath("/purchasing");
-  revalidatePath(`/projects/${projectId}`);
+  revalidatePath("/jobs");
+  if (projectId) {
+    revalidatePath(`/projects/${projectId}`);
+  }
   revalidatePath("/");
 }
 
 export async function updateVendorBillAction(formData: FormData) {
   const billId = text(formData, "vendor_bill_id");
-  const projectId = String(formData.get("project_id"));
+  const projectId = text(formData, "project_id");
 
   if (!billId) {
     return;
@@ -474,7 +503,10 @@ export async function updateVendorBillAction(formData: FormData) {
     .eq("id", billId);
 
   revalidatePath("/purchasing");
-  revalidatePath(`/projects/${projectId}`);
+  revalidatePath("/jobs");
+  if (projectId) {
+    revalidatePath(`/projects/${projectId}`);
+  }
   revalidatePath("/");
 }
 

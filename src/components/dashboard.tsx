@@ -11,13 +11,14 @@ import type {
   AssetRow,
   ClientRow,
   InvoiceRow,
+  JobRow,
   ProjectRow,
   TaskRow,
   VendorBillRow,
 } from "@/types/database";
 
 import { MetricCard } from "./metric-card";
-import { ProjectTable } from "./project-table";
+import { JobTable } from "./job-table";
 import { StatusBadge } from "./status-badge";
 import { EmptyState } from "./empty-state";
 
@@ -25,6 +26,7 @@ type DashboardProps = {
   data: {
     clients: ClientRow[];
     projects: ProjectRow[];
+    jobs: JobRow[];
     tasks: TaskRow[];
     invoices: InvoiceRow[];
     bills: VendorBillRow[];
@@ -33,8 +35,8 @@ type DashboardProps = {
 };
 
 export function Dashboard({ data }: DashboardProps) {
-  const activeProjects = data.projects.filter(
-    (project) => project.status === "in_progress" || project.status === "quote",
+  const activeJobs = data.jobs.filter(
+    (job) => job.status === "in_progress" || job.status === "quote",
   );
   const sentInvoices = data.invoices.filter(
     (invoice) => invoice.status !== "paid",
@@ -69,10 +71,10 @@ export function Dashboard({ data }: DashboardProps) {
             Visual Square ERP
           </p>
           <h1 className="mt-2 max-w-4xl break-keep text-2xl font-semibold tracking-normal text-[var(--foreground)] sm:text-3xl md:text-4xl">
-            프로젝트 중심 운영 대시보드
+            Job 중심 운영 대시보드
           </h1>
           <p className="mt-3 max-w-3xl text-sm leading-6 text-[var(--muted)]">
-            고객, 프로젝트, 인보이스, 발주·빌, 결과물을 한 프로젝트에
+            고객, Job, 인보이스, 발주·빌, 결과물을 실제 작업 단위에
             묶어서 디자인 에이전시와 인쇄 중개 업무의 마진을 추적합니다.
           </p>
         </div>
@@ -80,8 +82,8 @@ export function Dashboard({ data }: DashboardProps) {
 
       <section className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
         <MetricCard
-          label="진행 프로젝트"
-          value={`${activeProjects.length}`}
+          label="진행 Jobs"
+          value={`${activeJobs.length}`}
           detail={`${data.clients.length}개 고객 기준`}
           tone="coral"
         />
@@ -113,20 +115,20 @@ export function Dashboard({ data }: DashboardProps) {
         <div>
           <div className="mb-3 flex items-center justify-between gap-3">
             <div>
-              <h2 className="text-lg font-semibold">프로젝트 허브</h2>
+              <h2 className="text-lg font-semibold">Job 허브</h2>
               <p className="mt-1 text-sm text-[var(--muted)]">
-                유형별로 발주·빌 워크플로우 노출이 달라집니다.
+                실제 작업 단위로 견적, 발주, 청구 흐름을 추적합니다.
               </p>
             </div>
             <Link
-              href="/projects"
+              href="/jobs"
               className="ui-button min-h-9 px-3"
             >
               <ArrowUpRight className="mr-2 h-4 w-4" aria-hidden="true" />
-              프로젝트
+              Jobs
             </Link>
           </div>
-          <ProjectTable projects={data.projects} />
+          <JobTable jobs={data.jobs} />
         </div>
 
         <aside className="space-y-6">

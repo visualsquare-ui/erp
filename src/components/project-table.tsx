@@ -31,8 +31,8 @@ export function ProjectTable({ projects }: ProjectTableProps) {
   if (projects.length === 0) {
     return (
       <EmptyState
-        title="프로젝트 없음"
-        description="왼쪽 폼에서 첫 프로젝트를 추가하세요."
+        title="프로젝트 그룹 없음"
+        description="큰 작업 묶음이 생기면 왼쪽 폼에서 추가하세요."
       />
     );
   }
@@ -42,7 +42,7 @@ export function ProjectTable({ projects }: ProjectTableProps) {
       <table className="ui-table min-w-[860px]">
         <thead>
           <tr>
-            <th>프로젝트</th>
+            <th>프로젝트 그룹</th>
             <th>고객</th>
             <th>유형</th>
             <th>상태</th>

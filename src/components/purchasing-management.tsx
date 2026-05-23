@@ -18,7 +18,7 @@ import { toNumber } from "@/lib/erp-calculations";
 import { formatCurrency, formatUsDate } from "@/lib/format";
 import { createClient as createBrowserSupabaseClient } from "@/lib/supabase/client";
 import type {
-  ClientRow,
+  JobRow,
   ProjectRow,
   PurchaseOrderRow,
   VendorBillRow,
@@ -27,7 +27,7 @@ import type {
 
 type PurchasingManagementProps = {
   vendors: VendorRow[];
-  clients: ClientRow[];
+  jobs: JobRow[];
   projects: ProjectRow[];
   purchaseOrders: PurchaseOrderRow[];
   bills: VendorBillRow[];
@@ -35,6 +35,7 @@ type PurchasingManagementProps = {
 
 type PurchaseOrderItem = {
   clientId: string;
+  jobId: string;
   item: string;
   unitPrice: string;
   qty: string;
@@ -94,7 +95,7 @@ async function openVendorBillFile(fileReference: string) {
 
 function parsePurchaseOrderItems(order?: PurchaseOrderRow): PurchaseOrderItem[] {
   if (!order) {
-    return [{ clientId: "", item: "", unitPrice: "", qty: "1" }];
+    return [{ clientId: "", jobId: "", item: "", unitPrice: "", qty: "1" }];
   }
 
   if (order.spec) {
@@ -102,6 +103,7 @@ function parsePurchaseOrderItems(order?: PurchaseOrderRow): PurchaseOrderItem[] 
       const parsed = JSON.parse(order.spec) as {
         items?: {
           clientId?: string | null;
+          jobId?: string | null;
           item?: string;
           unitPrice?: number | string;
           qty?: number | string;
@@ -111,6 +113,7 @@ function parsePurchaseOrderItems(order?: PurchaseOrderRow): PurchaseOrderItem[] 
       if (Array.isArray(parsed.items) && parsed.items.length > 0) {
         return parsed.items.map((item) => ({
           clientId: String(item.clientId ?? ""),
+          jobId: String(item.jobId ?? ""),
           item: String(item.item ?? ""),
           unitPrice: String(item.unitPrice ?? ""),
           qty: String(item.qty ?? "1"),
@@ -124,6 +127,7 @@ function parsePurchaseOrderItems(order?: PurchaseOrderRow): PurchaseOrderItem[] 
   return [
     {
       clientId: "",
+      jobId: "",
       item: order.spec || "Item",
       unitPrice: String(toNumber(order.amount) || ""),
       qty: "1",
@@ -142,9 +146,16 @@ function todayInputValue() {
   return new Date().toISOString().slice(0, 10);
 }
 
+function getJobLabel(job: JobRow) {
+  const clientName = job.clients?.company_name ?? job.clients?.name ?? "Client";
+  const projectName = job.projects?.name ? ` · ${job.projects.name}` : "";
+
+  return `${job.name} · ${clientName}${projectName}`;
+}
+
 export function PurchasingManagement({
   vendors,
-  clients,
+  jobs,
   projects,
   purchaseOrders,
   bills,
@@ -183,7 +194,9 @@ export function PurchasingManagement({
 
     const formData = new FormData();
     formData.set("purchase_order_id", order.id);
-    formData.set("project_id", order.project_id);
+    if (order.project_id) {
+      formData.set("project_id", order.project_id);
+    }
     setDeletedOrder(order);
     await deletePurchaseOrderAction(formData);
 
@@ -199,7 +212,9 @@ export function PurchasingManagement({
 
     const formData = new FormData();
     formData.set("purchase_order_id", deletedOrder.id);
-    formData.set("project_id", deletedOrder.project_id);
+    if (deletedOrder.project_id) {
+      formData.set("project_id", deletedOrder.project_id);
+    }
     await restorePurchaseOrderAction(formData);
     setDeletedOrder(null);
   }
@@ -213,7 +228,9 @@ export function PurchasingManagement({
 
     const formData = new FormData();
     formData.set("vendor_bill_id", bill.id);
-    formData.set("project_id", bill.project_id);
+    if (bill.project_id) {
+      formData.set("project_id", bill.project_id);
+    }
     await deleteVendorBillAction(formData);
 
     if (editingBill?.id === bill.id) {
@@ -239,7 +256,7 @@ export function PurchasingManagement({
             key={editingOrder?.id ?? `new-po-${poFormKey}`}
             mode={orderMode === "edit" ? "edit" : "create"}
             vendors={vendors}
-            clients={clients}
+            jobs={jobs}
             projects={projects}
             order={editingOrder ?? undefined}
             onCancel={closeOrderForm}
@@ -355,7 +372,7 @@ export function PurchasingManagement({
 function PurchaseOrderForm({
   mode,
   vendors,
-  clients,
+  jobs,
   projects,
   order,
   onCancel,
@@ -363,7 +380,7 @@ function PurchaseOrderForm({
 }: {
   mode: "create" | "edit";
   vendors: VendorRow[];
-  clients: ClientRow[];
+  jobs: JobRow[];
   projects: ProjectRow[];
   order?: PurchaseOrderRow;
   onCancel: () => void;
@@ -389,7 +406,7 @@ function PurchaseOrderForm({
   function addItem() {
     setItems((currentItems) => [
       ...currentItems,
-      { clientId: "", item: "", unitPrice: "", qty: "1" },
+      { clientId: "", jobId: "", item: "", unitPrice: "", qty: "1" },
     ]);
   }
 
@@ -427,25 +444,31 @@ function PurchaseOrderForm({
         type="hidden"
         name="po_items_json"
         value={JSON.stringify(
-          items.map((item) => ({
-            clientId: item.clientId || null,
-            item: item.item,
-            unitPrice: toNumber(item.unitPrice),
-            qty: toNumber(item.qty) || 0,
-          })),
+          items.map((item) => {
+            const jobClientId = jobs.find(
+              (job) => job.id === item.jobId,
+            )?.client_id;
+
+            return {
+              clientId: jobClientId || item.clientId || null,
+              jobId: item.jobId || null,
+              item: item.item,
+              unitPrice: toNumber(item.unitPrice),
+              qty: toNumber(item.qty) || 0,
+            };
+          }),
         )}
       />
       <input type="hidden" name="amount" value={itemsTotal} />
 
       <div className="grid gap-3 md:grid-cols-2">
-        <Field label="Project">
+        <Field label="Project Group">
           <select
             className="ui-input"
             name="project_id"
-            required
             defaultValue={order?.project_id ?? ""}
           >
-            <option value="">Project</option>
+            <option value="">No project group</option>
             {projects.map((project) => (
               <option key={project.id} value={project.id}>
                 {project.name}
@@ -515,8 +538,8 @@ function PurchaseOrderForm({
         </div>
         <div className="overflow-x-auto border border-[var(--border)] bg-white">
           <div className="min-w-[48rem]">
-            <div className="grid h-8 grid-cols-[10rem_minmax(0,1fr)_7rem_4.5rem_7rem_2rem] items-center gap-2 border-b border-[var(--border)] px-2 text-[0.68rem] font-semibold uppercase tracking-[0.08em] text-[var(--muted)]">
-              <span>Client</span>
+            <div className="grid h-8 grid-cols-[14rem_minmax(0,1fr)_7rem_4.5rem_7rem_2rem] items-center gap-2 border-b border-[var(--border)] px-2 text-[0.68rem] font-semibold uppercase tracking-[0.08em] text-[var(--muted)]">
+              <span>Job</span>
               <span>Item</span>
               <span>Unit Price</span>
               <span>Qty</span>
@@ -531,21 +554,21 @@ function PurchaseOrderForm({
                 return (
                   <div
                     key={index}
-                    className="grid grid-cols-[10rem_minmax(0,1fr)_7rem_4.5rem_7rem_2rem] items-center gap-2 px-2 py-1.5"
+                    className="grid grid-cols-[14rem_minmax(0,1fr)_7rem_4.5rem_7rem_2rem] items-center gap-2 px-2 py-1.5"
                   >
                     <select
                       className="ui-input min-h-8 border-transparent px-2 text-sm hover:border-[var(--border)] focus-visible:border-[var(--coral)]"
-                      value={item.clientId}
+                      value={item.jobId}
                       required
-                      aria-label={`PO item ${index + 1} client`}
+                      aria-label={`PO item ${index + 1} job`}
                       onChange={(event) =>
-                        updateItem(index, "clientId", event.target.value)
+                        updateItem(index, "jobId", event.target.value)
                       }
                     >
-                      <option value="">Client</option>
-                      {clients.map((client) => (
-                        <option key={client.id} value={client.id}>
-                          {client.company_name ?? client.name}
+                      <option value="">Job</option>
+                      {jobs.map((job) => (
+                        <option key={job.id} value={job.id}>
+                          {getJobLabel(job)}
                         </option>
                       ))}
                     </select>
@@ -676,7 +699,7 @@ function VendorBillForm({
       return;
     }
 
-    setProjectId(purchaseOrder.project_id);
+    setProjectId(purchaseOrder.project_id ?? "");
     setVendorId(purchaseOrder.vendor_id);
     setAmount(String(toNumber(purchaseOrder.amount)));
   }
@@ -778,15 +801,14 @@ function VendorBillForm({
       ) : null}
 
       <div className="grid gap-3 md:grid-cols-2">
-        <Field label="Project">
+        <Field label="Project Group">
           <select
             className="ui-input"
             name="project_id"
-            required
             value={projectId}
             onChange={(event) => setProjectId(event.target.value)}
           >
-            <option value="">Project</option>
+            <option value="">No project group</option>
             {projects.map((project) => (
               <option key={project.id} value={project.id}>
                 {project.name}

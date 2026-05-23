@@ -7,6 +7,7 @@ import type {
   ClientRow,
   InvoiceItemRow,
   InvoiceRow,
+  JobRow,
   ProjectRow,
   ProofVersionRow,
   PurchaseOrderRow,
@@ -51,6 +52,7 @@ export async function getDashboardData() {
     clientsResult,
     projectsResult,
     tasksResult,
+    jobsResult,
     invoicesResult,
     billsResult,
     assetsResult,
@@ -58,6 +60,7 @@ export async function getDashboardData() {
     supabase.from("clients").select("*").order("created_at"),
     supabase.from("projects").select("*, clients(company_name, name)").order("due_date"),
     supabase.from("tasks").select("*").order("due_date"),
+    supabase.from("jobs").select("*, clients(company_name, name), projects(name, type)").order("due_date"),
     supabase.from("invoices").select("*, clients(company_name, name), projects(name)").order("due_date"),
     supabase.from("vendor_bills").select("*, vendors(name), projects(name, type)").order("due_date"),
     supabase.from("assets").select("*, projects(name, type)").eq("is_portfolio", true).order("created_at"),
@@ -68,6 +71,7 @@ export async function getDashboardData() {
     clients: (clientsResult.data ?? []) as ClientRow[],
     projects: (projectsResult.data ?? []) as ProjectRow[],
     tasks: (tasksResult.data ?? []) as TaskRow[],
+    jobs: (jobsResult.data ?? []) as JobRow[],
     invoices: (invoicesResult.data ?? []) as InvoiceRow[],
     bills: (billsResult.data ?? []) as VendorBillRow[],
     assets: (assetsResult.data ?? []) as AssetRow[],
@@ -82,6 +86,25 @@ export async function getClientsPageData() {
     .order("company_name", { ascending: true });
 
   return { user, clients: (data ?? []) as (ClientRow & { projects: ProjectRow[]; invoices: InvoiceRow[] })[] };
+}
+
+export async function getJobsPageData() {
+  const { user, supabase } = await getAuthedSupabase("/jobs");
+  const [clientsResult, projectsResult, jobsResult] = await Promise.all([
+    supabase.from("clients").select("*").order("company_name"),
+    supabase.from("projects").select("*, clients(company_name, name)").order("name"),
+    supabase
+      .from("jobs")
+      .select("*, clients(company_name, name), projects(name, type)")
+      .order("due_date", { ascending: true }),
+  ]);
+
+  return {
+    user,
+    clients: (clientsResult.data ?? []) as ClientRow[],
+    projects: (projectsResult.data ?? []) as ProjectRow[],
+    jobs: (jobsResult.data ?? []) as JobRow[],
+  };
 }
 
 export async function getProjectsPageData() {
@@ -173,15 +196,15 @@ export async function getPurchasingPageData() {
   const { user, supabase } = await getAuthedSupabase("/purchasing");
   const [
     vendorsResult,
-    clientsResult,
     projectsResult,
+    jobsResult,
     ordersResult,
     billsResult,
   ] =
     await Promise.all([
     supabase.from("vendors").select("*").order("name"),
-    supabase.from("clients").select("*").order("company_name"),
     supabase.from("projects").select("*, clients(company_name, name)").order("name"),
+    supabase.from("jobs").select("*, clients(company_name, name), projects(name, type)").order("name"),
     supabase.from("purchase_orders").select("*, vendors(name), projects(name, type)").order("order_date", { ascending: false }),
     supabase.from("vendor_bills").select("*, vendors(name), projects(name, type)").order("received_date", { ascending: false }),
   ]);
@@ -189,8 +212,8 @@ export async function getPurchasingPageData() {
   return {
     user,
     vendors: (vendorsResult.data ?? []) as VendorRow[],
-    clients: (clientsResult.data ?? []) as ClientRow[],
     projects: (projectsResult.data ?? []) as ProjectRow[],
+    jobs: (jobsResult.data ?? []) as JobRow[],
     purchaseOrders: ((ordersResult.data ?? []) as PurchaseOrderRow[]).filter(
       (order) => !isPurchaseOrderDeleted(order),
     ),

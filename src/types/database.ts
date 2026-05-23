@@ -40,6 +40,23 @@ export type ProjectRow = {
   clients?: Pick<ClientRow, "company_name" | "name"> | null;
 };
 
+export type JobRow = {
+  id: string;
+  client_id: string;
+  project_id: string | null;
+  name: string;
+  type: ProjectType;
+  status: ProjectStatus;
+  start_date: string | null;
+  due_date: string | null;
+  description: string | null;
+  quote_amount: string | number;
+  created_at: string;
+  updated_at: string;
+  clients?: Pick<ClientRow, "company_name" | "name"> | null;
+  projects?: Pick<ProjectRow, "name" | "type"> | null;
+};
+
 export type TaskRow = {
   id: string;
   project_id: string;
@@ -109,6 +126,7 @@ export type InvoiceRow = {
 export type InvoiceItemRow = {
   id: string;
   invoice_id: string;
+  job_id: string | null;
   description: string;
   quantity: string | number;
   unit_price: string | number;
@@ -119,7 +137,7 @@ export type InvoiceItemRow = {
 
 export type PurchaseOrderRow = {
   id: string;
-  project_id: string;
+  project_id: string | null;
   vendor_id: string;
   po_number: string;
   order_date: string;
@@ -134,7 +152,7 @@ export type PurchaseOrderRow = {
 
 export type VendorBillRow = {
   id: string;
-  project_id: string;
+  project_id: string | null;
   vendor_id: string;
   purchase_order_id: string | null;
   bill_number: string | null;
