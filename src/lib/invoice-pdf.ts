@@ -98,7 +98,6 @@ export async function buildInvoicePdf(invoice: InvoiceDocument) {
 
     let y = 256;
     const tableLeft = 48;
-    const tableRight = 564;
     const columns = {
       description: { x: 60, width: 276 },
       quantity: { x: 348, width: 42 },
@@ -179,44 +178,48 @@ export async function buildInvoicePdf(invoice: InvoiceDocument) {
         });
     });
 
-    let paymentY = totalTop + 92;
+    const paymentY = Math.max(totalTop + 88, 500);
     if (paymentLinks.length > 0) {
-      paymentY = Math.max(paymentY, 520);
       doc
         .font("VSBold")
         .fontSize(9)
         .fillColor("#6f6660")
-        .text("PAYMENT OPTIONS", tableLeft, paymentY);
+        .text("PAYMENT OPTIONS", tableLeft, paymentY, { lineBreak: false });
 
       paymentLinks.forEach((link, index) => {
-        const rowY = paymentY + 20 + index * 18;
+        const columnWidth = 158;
+        const columnX = tableLeft + index * 174;
+        const rowY = paymentY + 22;
         doc
           .font("VSBold")
           .fontSize(10)
           .fillColor("#141414")
-          .text(`${link.label} (${link.method})`, tableLeft, rowY, {
-            width: 150,
+          .text(link.label, columnX, rowY, {
+            width: columnWidth,
+            link: link.href,
+            underline: true,
+            lineBreak: false,
           })
           .font("VSRegular")
           .fillColor("#6f6660")
-          .text(link.href, tableLeft + 160, rowY, {
-            width: tableRight - tableLeft - 160,
-            link: link.href,
-            underline: true,
+          .text(link.method, columnX, rowY + 15, {
+            width: columnWidth,
+            lineBreak: false,
           });
       });
     }
 
     doc
-      .rect(48, 716, 516, 6)
+      .rect(48, 700, 516, 6)
       .fill("#f57d4b")
       .font("VSRegular")
       .fontSize(9)
       .fillColor("#6f6660")
-      .text("Visual Square", 48, 736)
-      .text("Thank you for your business.", 390, 736, {
+      .text("Visual Square", 48, 718, { lineBreak: false })
+      .text("Thank you for your business.", 390, 718, {
         width: 174,
         align: "right",
+        lineBreak: false,
       });
 
     doc.end();

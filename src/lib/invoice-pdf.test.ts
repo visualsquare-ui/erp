@@ -49,4 +49,30 @@ describe("invoice PDF", () => {
     expect(pdf.subarray(0, 4).toString()).toBe("%PDF");
     expect(pdf.length).toBeGreaterThan(1000);
   });
+
+  it("keeps the invoice and payment details on one page", async () => {
+    const originalLinks = {
+      stripe: process.env.NEXT_PUBLIC_STRIPE_PAYMENT_LINK,
+      zelle: process.env.NEXT_PUBLIC_ZELLE_PAYMENT_LINK,
+      venmo: process.env.NEXT_PUBLIC_VENMO_PAYMENT_LINK,
+    };
+    process.env.NEXT_PUBLIC_STRIPE_PAYMENT_LINK =
+      "https://buy.stripe.com/test_visual_square_invoice_payment";
+    process.env.NEXT_PUBLIC_ZELLE_PAYMENT_LINK =
+      "mailto:hello@visualsquare.com?subject=Invoice%20payment";
+    process.env.NEXT_PUBLIC_VENMO_PAYMENT_LINK =
+      "https://venmo.com/u/visualsquare";
+
+    try {
+      const pdf = await buildInvoicePdf(invoice);
+      const pageCount = pdf.toString("latin1").match(/\/Type\s*\/Page\b/g)
+        ?.length;
+
+      expect(pageCount).toBe(1);
+    } finally {
+      process.env.NEXT_PUBLIC_STRIPE_PAYMENT_LINK = originalLinks.stripe;
+      process.env.NEXT_PUBLIC_ZELLE_PAYMENT_LINK = originalLinks.zelle;
+      process.env.NEXT_PUBLIC_VENMO_PAYMENT_LINK = originalLinks.venmo;
+    }
+  });
 });
