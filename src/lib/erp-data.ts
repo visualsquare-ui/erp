@@ -226,8 +226,12 @@ export async function getProjectDetailData(id: string) {
 
 export async function getInvoicesPageData() {
   const { user, supabase } = await getAuthedSupabase("/invoices");
-  const [projectsResult, invoicesResult] = await Promise.all([
+  const [projectsResult, purchaseOrdersResult, invoicesResult] = await Promise.all([
     supabase.from("projects").select("*, clients(company_name, name)").order("name"),
+    supabase
+      .from("purchase_orders")
+      .select("*, vendors(name), projects(name, type)")
+      .order("order_date", { ascending: false }),
     supabase
       .from("invoices")
       .select("*, clients(company_name, name), projects(name), invoice_items(*)")
@@ -237,6 +241,9 @@ export async function getInvoicesPageData() {
   return {
     user,
     projects: (projectsResult.data ?? []) as ProjectRow[],
+    purchaseOrders: ((purchaseOrdersResult.data ?? []) as PurchaseOrderRow[]).filter(
+      (order) => !isPurchaseOrderDeleted(order),
+    ),
     invoices: (invoicesResult.data ?? []) as (InvoiceRow & { invoice_items: InvoiceItemRow[] })[],
   };
 }

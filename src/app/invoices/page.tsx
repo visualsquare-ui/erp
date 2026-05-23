@@ -6,7 +6,7 @@ import { getInvoicesPageData } from "@/lib/erp-data";
 export const dynamic = "force-dynamic";
 
 export default async function InvoicesPage() {
-  const { user, projects, invoices } = await getInvoicesPageData();
+  const { user, projects, purchaseOrders, invoices } = await getInvoicesPageData();
 
   return (
     <AppShell userEmail={user.email ?? "Staff"} activePath="/invoices">
@@ -16,7 +16,11 @@ export default async function InvoicesPage() {
         description="고객에게 보낼 청구서와 입금 상태를 한 화면에서 관리합니다."
       />
 
-      <InvoiceManagement projects={projects} invoices={invoices} />
+      <InvoiceManagement
+        projects={projects}
+        purchaseOrders={purchaseOrders}
+        invoices={invoices}
+      />
     </AppShell>
   );
 }

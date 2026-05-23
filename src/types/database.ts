@@ -126,6 +126,7 @@ export type InvoiceRow = {
 export type InvoiceItemRow = {
   id: string;
   invoice_id: string;
+  purchase_order_id: string | null;
   job_id: string | null;
   description: string;
   quantity: string | number;

@@ -47,6 +47,16 @@ type PurchaseOrderSpec = {
   };
 };
 
+type InvoiceItemInput = {
+  purchaseOrderId: string | null;
+  jobId: string | null;
+  description: string;
+  quantity: number;
+  unitPrice: number;
+  isTaxable: boolean;
+  taxRate: number;
+};
+
 function parsePurchaseOrderSpec(value: string | null): PurchaseOrderSpec {
   if (!value) {
     return {};
@@ -58,6 +68,54 @@ function parsePurchaseOrderSpec(value: string | null): PurchaseOrderSpec {
   } catch {
     return {};
   }
+}
+
+function parseInvoiceItems(formData: FormData): InvoiceItemInput[] {
+  const rawItems = text(formData, "invoice_items_json");
+
+  if (!rawItems) {
+    return [
+      {
+        purchaseOrderId: null,
+        jobId: null,
+        description: text(formData, "description") ?? "Design service",
+        quantity: toNumber(text(formData, "quantity")) || 1,
+        unitPrice: money(formData, "unit_price"),
+        isTaxable: checkbox(formData, "is_taxable"),
+        taxRate: toNumber(text(formData, "tax_rate")),
+      },
+    ];
+  }
+
+  let parsed: unknown;
+
+  try {
+    parsed = JSON.parse(rawItems);
+  } catch {
+    parsed = [];
+  }
+
+  const items = Array.isArray(parsed)
+    ? parsed
+        .map((item) => {
+          const source = item as Partial<InvoiceItemInput>;
+
+          return {
+            purchaseOrderId:
+              String(source.purchaseOrderId ?? "").trim() || null,
+            jobId: String(source.jobId ?? "").trim() || null,
+            description:
+              String(source.description ?? "").trim() || "Design service",
+            quantity: toNumber(source.quantity) || 1,
+            unitPrice: toNumber(source.unitPrice),
+            isTaxable: Boolean(source.isTaxable),
+            taxRate: toNumber(source.taxRate),
+          };
+        })
+        .filter((item) => item.description && item.quantity > 0)
+    : [];
+
+  return items.length > 0 ? items : parseInvoiceItems(new FormData());
 }
 
 function parsePurchaseOrderItems(formData: FormData): {
@@ -621,13 +679,15 @@ export async function createInvoiceAction(formData: FormData) {
   const returnPath = text(formData, "return_path") ?? "/invoices";
   const issueDate = text(formData, "issue_date") ?? todayIso();
   const terms = (text(formData, "terms") ?? "net_30") as PaymentTerms;
-  const quantity = toNumber(text(formData, "quantity")) || 1;
-  const unitPrice = money(formData, "unit_price");
-  const isTaxable = checkbox(formData, "is_taxable");
-  const taxRate = toNumber(text(formData, "tax_rate"));
-  const draft = calculateInvoiceDraft([
-    { quantity, unitPrice, isTaxable, taxRate },
-  ]);
+  const invoiceItems = parseInvoiceItems(formData);
+  const draft = calculateInvoiceDraft(
+    invoiceItems.map((item) => ({
+      quantity: item.quantity,
+      unitPrice: item.unitPrice,
+      isTaxable: item.isTaxable,
+      taxRate: item.taxRate,
+    })),
+  );
   const { supabase } = await getAuthedSupabase(returnPath);
   const { count } = await supabase
     .from("invoices")
@@ -636,7 +696,7 @@ export async function createInvoiceAction(formData: FormData) {
     text(formData, "invoice_number") ??
     `VS-${issueDate.slice(0, 4)}-${String((count ?? 0) + 1).padStart(4, "0")}`;
 
-  const { data } = await supabase
+  const { data, error: invoiceError } = await supabase
     .from("invoices")
     .insert({
       project_id: projectId,
@@ -655,16 +715,29 @@ export async function createInvoiceAction(formData: FormData) {
     .select("id")
     .single();
 
+  if (invoiceError) {
+    throw new Error(`Invoice 저장 실패: ${invoiceError.message}`);
+  }
+
   if (data?.id) {
-    await supabase.from("invoice_items").insert({
-      invoice_id: data.id,
-      description: text(formData, "description") ?? "Design service",
-      quantity,
-      unit_price: unitPrice,
-      amount: draft.subtotal,
-      is_taxable: isTaxable,
-      tax_rate: taxRate,
-    });
+    const { error: itemError } = await supabase.from("invoice_items").insert(
+      invoiceItems.map((item) => ({
+        invoice_id: data.id,
+        purchase_order_id: item.purchaseOrderId,
+        job_id: item.jobId,
+        description: item.description,
+        quantity: item.quantity,
+        unit_price: item.unitPrice,
+        amount: roundMoney(item.quantity * item.unitPrice),
+        is_taxable: item.isTaxable,
+        tax_rate: item.taxRate,
+      })),
+    );
+
+    if (itemError) {
+      await supabase.from("invoices").delete().eq("id", data.id);
+      throw new Error(`Invoice item 저장 실패: ${itemError.message}`);
+    }
   }
 
   revalidatePath("/invoices");
@@ -674,24 +747,25 @@ export async function createInvoiceAction(formData: FormData) {
 
 export async function updateInvoiceAction(formData: FormData) {
   const invoiceId = text(formData, "invoice_id");
-  const invoiceItemId = text(formData, "invoice_item_id");
   const projectId = String(formData.get("project_id"));
   const issueDate = text(formData, "issue_date") ?? todayIso();
   const terms = (text(formData, "terms") ?? "net_30") as PaymentTerms;
-  const quantity = toNumber(text(formData, "quantity")) || 1;
-  const unitPrice = money(formData, "unit_price");
-  const isTaxable = checkbox(formData, "is_taxable");
-  const taxRate = toNumber(text(formData, "tax_rate"));
-  const draft = calculateInvoiceDraft([
-    { quantity, unitPrice, isTaxable, taxRate },
-  ]);
+  const invoiceItems = parseInvoiceItems(formData);
+  const draft = calculateInvoiceDraft(
+    invoiceItems.map((item) => ({
+      quantity: item.quantity,
+      unitPrice: item.unitPrice,
+      isTaxable: item.isTaxable,
+      taxRate: item.taxRate,
+    })),
+  );
 
   if (!invoiceId) {
     return;
   }
 
   const { supabase } = await getAuthedSupabase("/invoices");
-  await supabase
+  const { error: invoiceError } = await supabase
     .from("invoices")
     .update({
       project_id: projectId,
@@ -710,23 +784,35 @@ export async function updateInvoiceAction(formData: FormData) {
     })
     .eq("id", invoiceId);
 
-  const itemPayload = {
-    invoice_id: invoiceId,
-    description: text(formData, "description") ?? "Design service",
-    quantity,
-    unit_price: unitPrice,
-    amount: draft.subtotal,
-    is_taxable: isTaxable,
-    tax_rate: taxRate,
-  };
+  if (invoiceError) {
+    throw new Error(`Invoice 수정 실패: ${invoiceError.message}`);
+  }
 
-  if (invoiceItemId) {
-    await supabase
-      .from("invoice_items")
-      .update(itemPayload)
-      .eq("id", invoiceItemId);
-  } else {
-    await supabase.from("invoice_items").insert(itemPayload);
+  const { error: deleteItemsError } = await supabase
+    .from("invoice_items")
+    .delete()
+    .eq("invoice_id", invoiceId);
+
+  if (deleteItemsError) {
+    throw new Error(`Invoice item 삭제 실패: ${deleteItemsError.message}`);
+  }
+
+  const { error: insertItemsError } = await supabase.from("invoice_items").insert(
+    invoiceItems.map((item) => ({
+      invoice_id: invoiceId,
+      purchase_order_id: item.purchaseOrderId,
+      job_id: item.jobId,
+      description: item.description,
+      quantity: item.quantity,
+      unit_price: item.unitPrice,
+      amount: roundMoney(item.quantity * item.unitPrice),
+      is_taxable: item.isTaxable,
+      tax_rate: item.taxRate,
+    })),
+  );
+
+  if (insertItemsError) {
+    throw new Error(`Invoice item 수정 실패: ${insertItemsError.message}`);
   }
 
   revalidatePath("/invoices");

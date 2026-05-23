@@ -13,7 +13,16 @@ import { ListActionButton } from "@/components/list-action-button";
 import { StatusBadge } from "@/components/status-badge";
 import { toNumber } from "@/lib/erp-calculations";
 import { formatCurrency, formatUsDate } from "@/lib/format";
-import type { InvoiceItemRow, InvoiceRow, ProjectRow } from "@/types/database";
+import {
+  buildInvoiceItemsFromPurchaseOrder,
+  type InvoiceLineDraft,
+} from "@/lib/invoice-po-items";
+import type {
+  InvoiceItemRow,
+  InvoiceRow,
+  ProjectRow,
+  PurchaseOrderRow,
+} from "@/types/database";
 
 type InvoiceWithItems = InvoiceRow & {
   invoice_items: InvoiceItemRow[];
@@ -21,11 +30,78 @@ type InvoiceWithItems = InvoiceRow & {
 
 type InvoiceManagementProps = {
   projects: ProjectRow[];
+  purchaseOrders: PurchaseOrderRow[];
   invoices: InvoiceWithItems[];
 };
 
+type InvoiceFormItem = {
+  purchaseOrderId: string;
+  jobId: string;
+  description: string;
+  quantity: string;
+  unitPrice: string;
+  isTaxable: boolean;
+  taxRate: string;
+};
+
+function createManualInvoiceItem(): InvoiceFormItem {
+  return {
+    purchaseOrderId: "",
+    jobId: "",
+    description: "",
+    quantity: "1",
+    unitPrice: "",
+    isTaxable: false,
+    taxRate: "0.06625",
+  };
+}
+
+function invoiceDraftToFormItem(item: InvoiceLineDraft): InvoiceFormItem {
+  return {
+    purchaseOrderId: item.purchaseOrderId ?? "",
+    jobId: item.jobId ?? "",
+    description: item.description,
+    quantity: String(item.quantity),
+    unitPrice: String(item.unitPrice),
+    isTaxable: false,
+    taxRate: "0.06625",
+  };
+}
+
+function buildItemsFromInvoice(invoice: InvoiceWithItems): InvoiceFormItem[] {
+  if (invoice.invoice_items.length === 0) {
+    return [createManualInvoiceItem()];
+  }
+
+  return invoice.invoice_items.map((item) => ({
+    purchaseOrderId: item.purchase_order_id ?? "",
+    jobId: item.job_id ?? "",
+    description: item.description,
+    quantity: String(item.quantity),
+    unitPrice: String(item.unit_price),
+    isTaxable: item.is_taxable,
+    taxRate: String(item.tax_rate),
+  }));
+}
+
+function getClientOptions(projects: ProjectRow[]) {
+  const options = new Map<string, string>();
+
+  projects.forEach((project) => {
+    if (!options.has(project.client_id)) {
+      options.set(
+        project.client_id,
+        project.clients?.company_name ?? project.clients?.name ?? "Client",
+      );
+    }
+  });
+
+  return Array.from(options, ([id, label]) => ({ id, label }));
+}
+
 export function InvoiceManagement({
   projects,
+  purchaseOrders,
   invoices,
 }: InvoiceManagementProps) {
   const [formMode, setFormMode] = useState<"closed" | "create" | "edit">(
@@ -82,6 +158,7 @@ export function InvoiceManagement({
           key={editingInvoice?.id ?? "new-invoice"}
           mode={formMode === "edit" ? "edit" : "create"}
           projects={projects}
+          purchaseOrders={purchaseOrders}
           invoice={editingInvoice ?? undefined}
           onCancel={closeForm}
           onSaved={closeForm}
@@ -115,17 +192,45 @@ export function InvoiceManagement({
 function InvoiceForm({
   mode,
   projects,
+  purchaseOrders,
   invoice,
   onCancel,
   onSaved,
 }: {
   mode: "create" | "edit";
   projects: ProjectRow[];
+  purchaseOrders: PurchaseOrderRow[];
   invoice?: InvoiceWithItems;
   onCancel: () => void;
   onSaved: () => void;
 }) {
-  const item = invoice?.invoice_items[0];
+  const [projectId, setProjectId] = useState(invoice?.project_id ?? "");
+  const [clientId, setClientId] = useState(invoice?.client_id ?? "");
+  const [items, setItems] = useState<InvoiceFormItem[]>(
+    invoice ? buildItemsFromInvoice(invoice) : [createManualInvoiceItem()],
+  );
+  const selectedPurchaseOrderIds = new Set(
+    items
+      .map((item) => item.purchaseOrderId)
+      .filter((purchaseOrderId) => purchaseOrderId),
+  );
+  const availablePurchaseOrders = purchaseOrders.filter(
+    (purchaseOrder) => !projectId || purchaseOrder.project_id === projectId,
+  );
+  const clients = getClientOptions(projects);
+  const subtotal = items.reduce(
+    (sum, item) => sum + toNumber(item.quantity) * toNumber(item.unitPrice),
+    0,
+  );
+  const tax = items.reduce((sum, item) => {
+    if (!item.isTaxable) {
+      return sum;
+    }
+
+    return (
+      sum + toNumber(item.quantity) * toNumber(item.unitPrice) * toNumber(item.taxRate)
+    );
+  }, 0);
 
   async function submit(formData: FormData) {
     if (mode === "edit") {
@@ -135,6 +240,66 @@ function InvoiceForm({
     }
 
     onSaved();
+  }
+
+  function selectProject(nextProjectId: string) {
+    const project = projects.find((candidate) => candidate.id === nextProjectId);
+
+    setProjectId(nextProjectId);
+    setClientId(project?.client_id ?? "");
+    setItems((currentItems) =>
+      currentItems
+        .filter((item) => !item.purchaseOrderId)
+        .map((item) => ({ ...item, purchaseOrderId: "" })),
+    );
+  }
+
+  function togglePurchaseOrder(purchaseOrder: PurchaseOrderRow, checked: boolean) {
+    if (checked) {
+      if (!projectId && purchaseOrder.project_id) {
+        selectProject(purchaseOrder.project_id);
+      }
+
+      const importedItems = buildInvoiceItemsFromPurchaseOrder(
+        purchaseOrder,
+      ).map(invoiceDraftToFormItem);
+
+      setItems((currentItems) => [
+        ...currentItems.filter(
+          (item) => item.description || item.purchaseOrderId,
+        ),
+        ...importedItems,
+      ]);
+      return;
+    }
+
+    setItems((currentItems) => {
+      const nextItems = currentItems.filter(
+        (item) => item.purchaseOrderId !== purchaseOrder.id,
+      );
+
+      return nextItems.length > 0 ? nextItems : [createManualInvoiceItem()];
+    });
+  }
+
+  function updateItem(
+    index: number,
+    key: keyof InvoiceFormItem,
+    value: string | boolean,
+  ) {
+    setItems((currentItems) =>
+      currentItems.map((item, itemIndex) =>
+        itemIndex === index ? { ...item, [key]: value } : item,
+      ),
+    );
+  }
+
+  function removeItem(index: number) {
+    setItems((currentItems) => {
+      const nextItems = currentItems.filter((_, itemIndex) => itemIndex !== index);
+
+      return nextItems.length > 0 ? nextItems : [createManualInvoiceItem()];
+    });
   }
 
   return (
@@ -157,11 +322,6 @@ function InvoiceForm({
           <input type="hidden" name="invoice_id" value={invoice.id} />
           <input
             type="hidden"
-            name="invoice_item_id"
-            value={item?.id ?? ""}
-          />
-          <input
-            type="hidden"
             name="paid_amount"
             value={toNumber(invoice.paid_amount)}
           />
@@ -172,6 +332,21 @@ function InvoiceForm({
           />
         </>
       ) : null}
+      <input
+        type="hidden"
+        name="invoice_items_json"
+        value={JSON.stringify(
+          items.map((item) => ({
+            purchaseOrderId: item.purchaseOrderId || null,
+            jobId: item.jobId || null,
+            description: item.description,
+            quantity: toNumber(item.quantity) || 1,
+            unitPrice: toNumber(item.unitPrice),
+            isTaxable: item.isTaxable,
+            taxRate: toNumber(item.taxRate),
+          })),
+        )}
+      />
 
       <div className="grid gap-3 md:grid-cols-2">
         <Field label="Project">
@@ -179,7 +354,8 @@ function InvoiceForm({
             className="ui-input"
             name="project_id"
             required
-            defaultValue={invoice?.project_id ?? ""}
+            value={projectId}
+            onChange={(event) => selectProject(event.target.value)}
           >
             <option value="">Project</option>
             {projects.map((project) => (
@@ -194,18 +370,61 @@ function InvoiceForm({
             className="ui-input"
             name="client_id"
             required
-            defaultValue={invoice?.client_id ?? ""}
+            value={clientId}
+            onChange={(event) => setClientId(event.target.value)}
           >
             <option value="">Client</option>
-            {projects.map((project) => (
-              <option key={project.id} value={project.client_id}>
-                {project.clients?.company_name ?? project.clients?.name} (
-                {project.name})
+            {clients.map((client) => (
+              <option key={client.id} value={client.id}>
+                {client.label}
               </option>
             ))}
           </select>
         </Field>
       </div>
+
+      <section className="space-y-2">
+        <div className="flex items-center justify-between gap-3 border-b border-[var(--border)] pb-2">
+          <h3 className="ui-label">PO 불러오기</h3>
+          <span className="text-xs text-[var(--muted)]">
+            여러 PO 선택 가능
+          </span>
+        </div>
+        {availablePurchaseOrders.length === 0 ? (
+          <div className="border border-dashed border-[var(--border)] bg-white px-3 py-4 text-sm text-[var(--muted)]">
+            선택한 프로젝트에 연결된 PO가 없습니다.
+          </div>
+        ) : (
+          <div className="grid gap-2 md:grid-cols-2">
+            {availablePurchaseOrders.map((purchaseOrder) => (
+              <label
+                key={purchaseOrder.id}
+                className="flex cursor-pointer items-start gap-2 border border-[var(--border)] bg-white p-3 text-sm transition-colors hover:border-[var(--coral)] hover:bg-[var(--coral-quiet)]"
+              >
+                <input
+                  type="checkbox"
+                  className="mt-1 h-4 w-4"
+                  checked={selectedPurchaseOrderIds.has(purchaseOrder.id)}
+                  onChange={(event) =>
+                    togglePurchaseOrder(purchaseOrder, event.target.checked)
+                  }
+                />
+                <span className="min-w-0">
+                  <span className="block font-semibold text-[var(--foreground)]">
+                    {purchaseOrder.po_number}
+                  </span>
+                  <span className="mt-0.5 block text-xs text-[var(--muted)]">
+                    {purchaseOrder.projects?.name ?? "-"} ·{" "}
+                    {purchaseOrder.vendors?.name ?? "-"} ·{" "}
+                    {formatCurrency(toNumber(purchaseOrder.amount))}
+                  </span>
+                </span>
+              </label>
+            ))}
+          </div>
+        )}
+      </section>
+
       <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_10rem_9rem]">
         <Field label="Invoice #">
           <input
@@ -237,37 +456,127 @@ function InvoiceForm({
           </select>
         </Field>
       </div>
-      <Field label="Description">
-        <input
-          className="ui-input"
-          name="description"
-          placeholder="Design service..."
-          autoComplete="off"
-          defaultValue={item?.description ?? ""}
-        />
-      </Field>
-      <div className="grid gap-3 md:grid-cols-[8rem_1fr_10rem]">
-        <Field label="Quantity">
-          <input
-            className="ui-input"
-            name="quantity"
-            type="number"
-            step="0.01"
-            defaultValue={item ? toNumber(item.quantity) : "1"}
-            inputMode="decimal"
-          />
-        </Field>
-        <Field label="Unit Price">
-          <input
-            className="ui-input"
-            name="unit_price"
-            type="number"
-            step="0.01"
-            placeholder="1200.00"
-            inputMode="decimal"
-            defaultValue={item ? toNumber(item.unit_price) : ""}
-          />
-        </Field>
+      <section className="space-y-2">
+        <div className="flex items-center justify-between gap-3 border-b border-[var(--border)] pb-2">
+          <h3 className="ui-label">Invoice Items</h3>
+          <button
+            type="button"
+            className="inline-flex h-7 items-center border border-transparent px-2 text-xs font-semibold text-[var(--muted)] transition-colors hover:border-[var(--border-strong)] hover:bg-white hover:text-[var(--foreground)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--coral)]"
+            onClick={() =>
+              setItems((currentItems) => [...currentItems, createManualInvoiceItem()])
+            }
+          >
+            + Line
+          </button>
+        </div>
+        <div className="overflow-x-auto border border-[var(--border)] bg-white">
+          <div className="min-w-[58rem]">
+            <div className="grid h-8 grid-cols-[minmax(0,1fr)_5rem_7rem_5rem_6rem_7rem_4rem] items-center gap-2 border-b border-[var(--border)] px-2 text-[0.68rem] font-semibold uppercase tracking-[0.08em] text-[var(--muted)]">
+              <span>Description</span>
+              <span>Qty</span>
+              <span>Unit</span>
+              <span>Tax</span>
+              <span>Tax Rate</span>
+              <span className="text-right">Total</span>
+              <span />
+            </div>
+            <div className="divide-y divide-[var(--border)]">
+              {items.map((lineItem, index) => {
+                const lineTotal =
+                  toNumber(lineItem.quantity) * toNumber(lineItem.unitPrice);
+
+                return (
+                  <div
+                    key={`${lineItem.purchaseOrderId}-${index}`}
+                    className="grid grid-cols-[minmax(0,1fr)_5rem_7rem_5rem_6rem_7rem_4rem] items-center gap-2 px-2 py-1.5"
+                  >
+                    <input
+                      className="ui-input min-h-8 border-transparent px-2 text-sm hover:border-[var(--border)] focus-visible:border-[var(--coral)]"
+                      value={lineItem.description}
+                      required
+                      onChange={(event) =>
+                        updateItem(index, "description", event.target.value)
+                      }
+                    />
+                    <input
+                      className="ui-input min-h-8 border-transparent px-2 text-sm tabular-nums hover:border-[var(--border)] focus-visible:border-[var(--coral)]"
+                      value={lineItem.quantity}
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      required
+                      inputMode="decimal"
+                      onChange={(event) =>
+                        updateItem(index, "quantity", event.target.value)
+                      }
+                    />
+                    <input
+                      className="ui-input min-h-8 border-transparent px-2 text-sm tabular-nums hover:border-[var(--border)] focus-visible:border-[var(--coral)]"
+                      value={lineItem.unitPrice}
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      required
+                      inputMode="decimal"
+                      onChange={(event) =>
+                        updateItem(index, "unitPrice", event.target.value)
+                      }
+                    />
+                    <label className="flex items-center justify-center">
+                      <input
+                        className="h-4 w-4"
+                        type="checkbox"
+                        checked={lineItem.isTaxable}
+                        onChange={(event) =>
+                          updateItem(index, "isTaxable", event.target.checked)
+                        }
+                      />
+                    </label>
+                    <input
+                      className="ui-input min-h-8 border-transparent px-2 text-sm tabular-nums hover:border-[var(--border)] focus-visible:border-[var(--coral)]"
+                      value={lineItem.taxRate}
+                      type="number"
+                      step="0.00001"
+                      min="0"
+                      inputMode="decimal"
+                      onChange={(event) =>
+                        updateItem(index, "taxRate", event.target.value)
+                      }
+                    />
+                    <p className="text-right text-sm font-semibold tabular-nums">
+                      {formatCurrency(lineTotal)}
+                    </p>
+                    <button
+                      type="button"
+                      className="text-xs font-semibold text-[var(--muted)] transition-colors hover:text-[#8a2f1e]"
+                      onClick={() => removeItem(index)}
+                    >
+                      삭제
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="flex justify-end border-t border-[var(--border)] bg-[var(--surface)] px-2 py-2">
+              <div className="w-64 space-y-1 text-sm tabular-nums">
+                <p className="flex justify-between gap-3">
+                  <span className="text-[var(--muted)]">Subtotal</span>
+                  <strong>{formatCurrency(subtotal)}</strong>
+                </p>
+                <p className="flex justify-between gap-3">
+                  <span className="text-[var(--muted)]">Tax</span>
+                  <strong>{formatCurrency(tax)}</strong>
+                </p>
+                <p className="flex justify-between gap-3 border-t border-[var(--border)] pt-1">
+                  <span>Total</span>
+                  <strong>{formatCurrency(subtotal + tax)}</strong>
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+      <div className="grid gap-3 md:grid-cols-[1fr_10rem]">
         <Field label="Terms">
           <select
             className="ui-input"
@@ -279,26 +588,12 @@ function InvoiceForm({
             <option value="due_on_receipt">Due on receipt</option>
           </select>
         </Field>
-      </div>
-      <div className="grid gap-3 md:grid-cols-[1fr_10rem]">
-        <label className="flex min-h-10 items-center gap-2 text-sm font-semibold">
-          <input
-            name="is_taxable"
-            type="checkbox"
-            className="h-4 w-4"
-            defaultChecked={item?.is_taxable ?? false}
-          />
-          Taxable
-        </label>
-        <Field label="Tax Rate">
+        <Field label="Due Date">
           <input
             className="ui-input"
-            name="tax_rate"
-            type="number"
-            step="0.00001"
-            placeholder="0.06625"
-            inputMode="decimal"
-            defaultValue={item ? toNumber(item.tax_rate) : ""}
+            name="due_date"
+            type="date"
+            defaultValue={invoice?.due_date ?? ""}
           />
         </Field>
       </div>
