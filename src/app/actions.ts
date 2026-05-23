@@ -9,6 +9,11 @@ import {
   roundMoney,
   toNumber,
 } from "@/lib/erp-calculations";
+import {
+  buildGeneratedVendorBillNumber,
+  getDateNumberToken,
+  getVendorCode,
+} from "@/lib/document-numbering";
 import { addPaymentTermDays, type PaymentTerms } from "@/lib/format";
 import { getAuthedSupabase } from "@/lib/erp-data";
 import type { ProjectType } from "@/lib/project-rules";
@@ -30,6 +35,10 @@ function checkbox(formData: FormData, key: string): boolean {
 function todayIso(): string {
   return new Date().toISOString().slice(0, 10);
 }
+
+type AuthedSupabaseClient = Awaited<
+  ReturnType<typeof getAuthedSupabase>
+>["supabase"];
 
 type PurchaseOrderItemInput = {
   clientId: string | null;
@@ -166,6 +175,50 @@ function parsePurchaseOrderItems(formData: FormData): {
     total,
     spec: JSON.stringify({ items }),
   };
+}
+
+async function generateVendorBillNumber({
+  supabase,
+  vendorId,
+  receivedDate,
+  currentBillId,
+}: {
+  supabase: AuthedSupabaseClient;
+  vendorId: string;
+  receivedDate: string;
+  currentBillId?: string | null;
+}) {
+  const { data: vendor } = await supabase
+    .from("vendors")
+    .select("name")
+    .eq("id", vendorId)
+    .single();
+  const vendorName = vendor?.name ?? vendorId;
+  const prefix = `${getVendorCode(vendorName)}-${getDateNumberToken(
+    receivedDate,
+  )}`;
+  const { data: existingBills } = await supabase
+    .from("vendor_bills")
+    .select("id,bill_number")
+    .eq("vendor_id", vendorId)
+    .eq("received_date", receivedDate);
+  const comparableBills = (existingBills ?? []).filter(
+    (bill) => bill.id !== currentBillId,
+  );
+  const maxGeneratedSequence = comparableBills.reduce((max, bill) => {
+    const suffix = String(bill.bill_number ?? "").match(
+      new RegExp(`^${prefix}-(\\d{2})$`),
+    )?.[1];
+
+    return Math.max(max, suffix ? Number(suffix) : 0);
+  }, 0);
+  const sequence = Math.max(maxGeneratedSequence, comparableBills.length) + 1;
+
+  return buildGeneratedVendorBillNumber({
+    vendorName,
+    receivedDate,
+    sequence,
+  });
 }
 
 export async function createClientAction(formData: FormData) {
@@ -594,13 +647,27 @@ export async function createVendorBillAction(formData: FormData) {
   const projectId = text(formData, "project_id");
   const returnPath = text(formData, "return_path") ?? "/purchasing";
   const status = text(formData, "status") ?? "received";
+  const vendorId = text(formData, "vendor_id");
+  const receivedDate = text(formData, "received_date") ?? todayIso();
+
+  if (!vendorId) {
+    throw new Error("Bill을 저장하려면 Vendor를 선택해야 합니다.");
+  }
+
   const { supabase } = await getAuthedSupabase(returnPath);
+  const billNumber =
+    text(formData, "bill_number") ??
+    (await generateVendorBillNumber({
+      supabase,
+      vendorId,
+      receivedDate,
+    }));
   const { error } = await supabase.from("vendor_bills").insert({
     project_id: projectId,
-    vendor_id: text(formData, "vendor_id"),
+    vendor_id: vendorId,
     purchase_order_id: text(formData, "purchase_order_id"),
-    bill_number: text(formData, "bill_number"),
-    received_date: text(formData, "received_date") ?? todayIso(),
+    bill_number: billNumber,
+    received_date: receivedDate,
     due_date: text(formData, "due_date"),
     amount: money(formData, "amount"),
     status,
@@ -624,20 +691,34 @@ export async function updateVendorBillAction(formData: FormData) {
   const billId = text(formData, "vendor_bill_id");
   const projectId = text(formData, "project_id");
   const status = text(formData, "status") ?? "received";
+  const vendorId = text(formData, "vendor_id");
+  const receivedDate = text(formData, "received_date") ?? todayIso();
 
   if (!billId) {
     return;
   }
 
+  if (!vendorId) {
+    throw new Error("Bill을 수정하려면 Vendor를 선택해야 합니다.");
+  }
+
   const { supabase } = await getAuthedSupabase("/purchasing");
+  const billNumber =
+    text(formData, "bill_number") ??
+    (await generateVendorBillNumber({
+      supabase,
+      vendorId,
+      receivedDate,
+      currentBillId: billId,
+    }));
   const { error } = await supabase
     .from("vendor_bills")
     .update({
       project_id: projectId,
-      vendor_id: text(formData, "vendor_id"),
+      vendor_id: vendorId,
       purchase_order_id: text(formData, "purchase_order_id"),
-      bill_number: text(formData, "bill_number"),
-      received_date: text(formData, "received_date") ?? todayIso(),
+      bill_number: billNumber,
+      received_date: receivedDate,
       due_date: text(formData, "due_date"),
       amount: money(formData, "amount"),
       status,

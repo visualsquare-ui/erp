@@ -15,6 +15,7 @@ import {
 } from "@/app/actions";
 import { EmptyState } from "@/components/empty-state";
 import { ListActionButton } from "@/components/list-action-button";
+import { buildVendorBillDisplayNumbers } from "@/lib/document-numbering";
 import { toNumber } from "@/lib/erp-calculations";
 import { formatCurrency, formatUsDate } from "@/lib/format";
 import { createClient as createBrowserSupabaseClient } from "@/lib/supabase/client";
@@ -181,6 +182,7 @@ export function PurchasingManagement({
   const [deletedOrder, setDeletedOrder] = useState<PurchaseOrderRow | null>(
     null,
   );
+  const billDisplayNumbers = buildVendorBillDisplayNumbers(bills);
 
   function closeOrderForm() {
     setOrderMode("closed");
@@ -378,7 +380,7 @@ export function PurchasingManagement({
             {bills.map((bill) => (
               <DocumentRow
                 key={bill.id}
-                title={bill.bill_number ?? bill.id}
+                title={billDisplayNumbers.get(bill.id) ?? "Bill"}
                 meta={[
                   bill.projects?.name ?? "-",
                   bill.vendors?.name ?? "-",
@@ -924,7 +926,7 @@ function VendorBillForm({
           <input
             className="ui-input"
             name="bill_number"
-            placeholder="INV-2001..."
+            placeholder="비워두면 자동 생성"
             autoComplete="off"
             defaultValue={bill?.bill_number ?? ""}
           />
