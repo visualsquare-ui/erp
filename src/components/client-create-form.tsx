@@ -1,9 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Pencil } from "lucide-react";
+import { Pencil, Trash2 } from "lucide-react";
 
-import { createClientAction, updateClientAction } from "@/app/actions";
+import {
+  createClientAction,
+  deleteClientAction,
+  updateClientAction,
+} from "@/app/actions";
 import { calculateOutstandingAr, toNumber } from "@/lib/erp-calculations";
 import { formatCurrency } from "@/lib/format";
 import type { ClientRow, InvoiceRow, ProjectRow } from "@/types/database";
@@ -451,6 +455,21 @@ export function ClientManagement({
     setEditingClient(null);
   }
 
+  async function deleteClient(clientId: string) {
+    const confirmed = window.confirm(
+      "이 고객을 삭제할까요? 연결된 프로젝트가 있으면 삭제되지 않을 수 있습니다.",
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    const formData = new FormData();
+    formData.set("client_id", clientId);
+    await deleteClientAction(formData);
+    closeForm();
+  }
+
   return (
     <section className="space-y-4">
       <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
@@ -519,7 +538,7 @@ export function ClientManagement({
             return (
               <article
                 key={client.id}
-                className="grid gap-4 border-b border-[var(--border)] p-5 last:border-b-0 md:grid-cols-[minmax(0,1fr)_220px]"
+                className="grid gap-4 border-b border-[var(--border)] p-5 last:border-b-0 md:grid-cols-[minmax(0,1fr)_180px]"
               >
                 <div className="min-w-0">
                   <h3 className="break-words font-semibold">
@@ -544,19 +563,6 @@ export function ClientManagement({
                 </div>
                 <div className="grid grid-cols-3 gap-2 text-sm md:grid-cols-1">
                   <div>
-                    <button
-                      type="button"
-                      className="ui-button ui-button-secondary min-h-9 w-full px-3"
-                      onClick={() => {
-                        setEditingClient(client);
-                        setFormMode("edit");
-                      }}
-                    >
-                      <Pencil className="mr-2 h-4 w-4" aria-hidden="true" />
-                      수정
-                    </button>
-                  </div>
-                  <div>
                     <p className="text-xs text-[var(--muted)]">Projects</p>
                     <p className="font-semibold tabular-nums">
                       {client.projects.length}
@@ -574,6 +580,27 @@ export function ClientManagement({
                       {formatCurrency(outstanding)}
                     </p>
                   </div>
+                </div>
+                <div className="flex flex-wrap justify-end gap-2 md:col-span-2">
+                  <button
+                    type="button"
+                    className="inline-flex min-h-8 items-center border border-[var(--border-strong)] bg-white px-2.5 text-xs font-semibold text-[var(--foreground)] transition hover:border-[var(--coral)] hover:bg-[var(--coral-quiet)] hover:text-[var(--coral-strong)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--coral)]"
+                    onClick={() => {
+                      setEditingClient(client);
+                      setFormMode("edit");
+                    }}
+                  >
+                    <Pencil className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" />
+                    수정
+                  </button>
+                  <button
+                    type="button"
+                    className="inline-flex min-h-8 items-center border border-[#d8c2bd] bg-white px-2.5 text-xs font-semibold text-[#8a2f1e] transition hover:border-[#8a2f1e] hover:bg-[#f8e8e4] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#8a2f1e]"
+                    onClick={() => void deleteClient(client.id)}
+                  >
+                    <Trash2 className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" />
+                    삭제
+                  </button>
                 </div>
               </article>
             );

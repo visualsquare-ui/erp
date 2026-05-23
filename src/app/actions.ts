@@ -68,6 +68,20 @@ export async function updateClientAction(formData: FormData) {
   revalidatePath("/");
 }
 
+export async function deleteClientAction(formData: FormData) {
+  const clientId = text(formData, "client_id");
+
+  if (!clientId) {
+    return;
+  }
+
+  const { supabase } = await getAuthedSupabase("/clients");
+  await supabase.from("clients").delete().eq("id", clientId);
+
+  revalidatePath("/clients");
+  revalidatePath("/");
+}
+
 export async function createProjectAction(formData: FormData) {
   const { supabase } = await getAuthedSupabase("/projects");
   const { data } = await supabase
