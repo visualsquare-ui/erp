@@ -32,6 +32,7 @@ function todayIso(): string {
 }
 
 type PurchaseOrderItemInput = {
+  clientId: string | null;
   item: string;
   unitPrice: number;
   qty: number;
@@ -66,6 +67,7 @@ function parsePurchaseOrderItems(formData: FormData): {
           const source = item as Partial<PurchaseOrderItemInput>;
 
           return {
+            clientId: String(source.clientId ?? "").trim() || null,
             item: String(source.item ?? "").trim(),
             unitPrice: toNumber(source.unitPrice),
             qty: toNumber(source.qty) || 1,

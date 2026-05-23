@@ -153,9 +153,16 @@ export async function getInvoicesPageData() {
 
 export async function getPurchasingPageData() {
   const { user, supabase } = await getAuthedSupabase("/purchasing");
-  const [vendorsResult, projectsResult, ordersResult, billsResult] =
+  const [
+    vendorsResult,
+    clientsResult,
+    projectsResult,
+    ordersResult,
+    billsResult,
+  ] =
     await Promise.all([
     supabase.from("vendors").select("*").order("name"),
+    supabase.from("clients").select("*").order("company_name"),
     supabase.from("projects").select("*, clients(company_name, name)").order("name"),
     supabase.from("purchase_orders").select("*, vendors(name), projects(name, type)").order("order_date", { ascending: false }),
     supabase.from("vendor_bills").select("*, vendors(name), projects(name, type)").order("received_date", { ascending: false }),
@@ -164,6 +171,7 @@ export async function getPurchasingPageData() {
   return {
     user,
     vendors: (vendorsResult.data ?? []) as VendorRow[],
+    clients: (clientsResult.data ?? []) as ClientRow[],
     projects: (projectsResult.data ?? []) as ProjectRow[],
     purchaseOrders: (ordersResult.data ?? []) as PurchaseOrderRow[],
     bills: (billsResult.data ?? []) as VendorBillRow[],

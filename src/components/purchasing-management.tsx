@@ -16,6 +16,7 @@ import { ListActionButton } from "@/components/list-action-button";
 import { toNumber } from "@/lib/erp-calculations";
 import { formatCurrency, formatUsDate } from "@/lib/format";
 import type {
+  ClientRow,
   ProjectRow,
   PurchaseOrderRow,
   VendorBillRow,
@@ -24,12 +25,14 @@ import type {
 
 type PurchasingManagementProps = {
   vendors: VendorRow[];
+  clients: ClientRow[];
   projects: ProjectRow[];
   purchaseOrders: PurchaseOrderRow[];
   bills: VendorBillRow[];
 };
 
 type PurchaseOrderItem = {
+  clientId: string;
   item: string;
   unitPrice: string;
   qty: string;
@@ -37,13 +40,14 @@ type PurchaseOrderItem = {
 
 function parsePurchaseOrderItems(order?: PurchaseOrderRow): PurchaseOrderItem[] {
   if (!order) {
-    return [{ item: "", unitPrice: "", qty: "1" }];
+    return [{ clientId: "", item: "", unitPrice: "", qty: "1" }];
   }
 
   if (order.spec) {
     try {
       const parsed = JSON.parse(order.spec) as {
         items?: {
+          clientId?: string | null;
           item?: string;
           unitPrice?: number | string;
           qty?: number | string;
@@ -52,6 +56,7 @@ function parsePurchaseOrderItems(order?: PurchaseOrderRow): PurchaseOrderItem[] 
 
       if (Array.isArray(parsed.items) && parsed.items.length > 0) {
         return parsed.items.map((item) => ({
+          clientId: String(item.clientId ?? ""),
           item: String(item.item ?? ""),
           unitPrice: String(item.unitPrice ?? ""),
           qty: String(item.qty ?? "1"),
@@ -64,6 +69,7 @@ function parsePurchaseOrderItems(order?: PurchaseOrderRow): PurchaseOrderItem[] 
 
   return [
     {
+      clientId: "",
       item: order.spec || "Item",
       unitPrice: String(toNumber(order.amount) || ""),
       qty: "1",
@@ -78,8 +84,13 @@ function calculateItemsTotal(items: PurchaseOrderItem[]) {
   );
 }
 
+function todayInputValue() {
+  return new Date().toISOString().slice(0, 10);
+}
+
 export function PurchasingManagement({
   vendors,
+  clients,
   projects,
   purchaseOrders,
   bills,
@@ -158,6 +169,7 @@ export function PurchasingManagement({
             key={editingOrder?.id ?? `new-po-${poFormKey}`}
             mode={orderMode === "edit" ? "edit" : "create"}
             vendors={vendors}
+            clients={clients}
             projects={projects}
             order={editingOrder ?? undefined}
             onCancel={closeOrderForm}
@@ -254,6 +266,7 @@ export function PurchasingManagement({
 function PurchaseOrderForm({
   mode,
   vendors,
+  clients,
   projects,
   order,
   onCancel,
@@ -261,6 +274,7 @@ function PurchaseOrderForm({
 }: {
   mode: "create" | "edit";
   vendors: VendorRow[];
+  clients: ClientRow[];
   projects: ProjectRow[];
   order?: PurchaseOrderRow;
   onCancel: () => void;
@@ -286,7 +300,7 @@ function PurchaseOrderForm({
   function addItem() {
     setItems((currentItems) => [
       ...currentItems,
-      { item: "", unitPrice: "", qty: "1" },
+      { clientId: "", item: "", unitPrice: "", qty: "1" },
     ]);
   }
 
@@ -318,7 +332,6 @@ function PurchaseOrderForm({
       {order ? (
         <>
           <input type="hidden" name="purchase_order_id" value={order.id} />
-          <input type="hidden" name="order_date" value={order.order_date} />
         </>
       ) : null}
       <input
@@ -326,6 +339,7 @@ function PurchaseOrderForm({
         name="po_items_json"
         value={JSON.stringify(
           items.map((item) => ({
+            clientId: item.clientId || null,
             item: item.item,
             unitPrice: toNumber(item.unitPrice),
             qty: toNumber(item.qty) || 0,
@@ -366,7 +380,7 @@ function PurchaseOrderForm({
           </select>
         </Field>
       </div>
-      <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_9rem]">
+      <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_9rem_10rem]">
         <Field label="PO Number">
           <input
             className="ui-input"
@@ -374,6 +388,15 @@ function PurchaseOrderForm({
             placeholder="PO-1001..."
             autoComplete="off"
             defaultValue={order?.po_number ?? ""}
+          />
+        </Field>
+        <Field label="PO Date">
+          <input
+            className="ui-input"
+            name="order_date"
+            type="date"
+            required
+            defaultValue={order?.order_date ?? todayInputValue()}
           />
         </Field>
         <Field label="Status">
@@ -402,8 +425,9 @@ function PurchaseOrderForm({
           </button>
         </div>
         <div className="overflow-x-auto border border-[var(--border)] bg-white">
-          <div className="min-w-[36rem]">
-            <div className="grid h-8 grid-cols-[minmax(0,1fr)_7rem_4.5rem_7rem_2rem] items-center gap-2 border-b border-[var(--border)] px-2 text-[0.68rem] font-semibold uppercase tracking-[0.08em] text-[var(--muted)]">
+          <div className="min-w-[48rem]">
+            <div className="grid h-8 grid-cols-[10rem_minmax(0,1fr)_7rem_4.5rem_7rem_2rem] items-center gap-2 border-b border-[var(--border)] px-2 text-[0.68rem] font-semibold uppercase tracking-[0.08em] text-[var(--muted)]">
+              <span>Client</span>
               <span>Item</span>
               <span>Unit Price</span>
               <span>Qty</span>
@@ -418,11 +442,28 @@ function PurchaseOrderForm({
                 return (
                   <div
                     key={index}
-                    className="grid grid-cols-[minmax(0,1fr)_7rem_4.5rem_7rem_2rem] items-center gap-2 px-2 py-1.5"
+                    className="grid grid-cols-[10rem_minmax(0,1fr)_7rem_4.5rem_7rem_2rem] items-center gap-2 px-2 py-1.5"
                   >
+                    <select
+                      className="ui-input min-h-8 border-transparent px-2 text-sm hover:border-[var(--border)] focus-visible:border-[var(--coral)]"
+                      value={item.clientId}
+                      required
+                      aria-label={`PO item ${index + 1} client`}
+                      onChange={(event) =>
+                        updateItem(index, "clientId", event.target.value)
+                      }
+                    >
+                      <option value="">Client</option>
+                      {clients.map((client) => (
+                        <option key={client.id} value={client.id}>
+                          {client.company_name ?? client.name}
+                        </option>
+                      ))}
+                    </select>
                     <input
                       className="ui-input min-h-8 border-transparent px-2 text-sm hover:border-[var(--border)] focus-visible:border-[var(--coral)]"
                       value={item.item}
+                      required
                       placeholder="Business cards, banner…"
                       aria-label={`PO item ${index + 1}`}
                       onChange={(event) =>
@@ -435,6 +476,7 @@ function PurchaseOrderForm({
                       type="number"
                       step="0.01"
                       min="0"
+                      required
                       placeholder="0.00"
                       inputMode="decimal"
                       aria-label={`PO item ${index + 1} unit price`}
@@ -448,6 +490,7 @@ function PurchaseOrderForm({
                       type="number"
                       step="0.01"
                       min="0"
+                      required
                       placeholder="1"
                       inputMode="decimal"
                       aria-label={`PO item ${index + 1} quantity`}

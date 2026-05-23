@@ -48,8 +48,9 @@ This guide is the working design reference for the internal ERP. It distills the
 ## Data Entry Patterns
 
 - Document numbers, dates, and status fields belong near the document header.
+- PO headers include `PO Number`, `PO Date`, and `Status`.
 - Money totals should be calculated from line items when line items exist.
-- Line item rows should use `Item / Unit Price / Qty / Total`.
+- PO line item rows should use `Client / Item / Unit Price / Qty / Total`.
 - The final document total appears after the line items as `Total Amount`; it should not compete visually with form headings.
 
 ## Copy

@@ -6,7 +6,7 @@ import { getPurchasingPageData } from "@/lib/erp-data";
 export const dynamic = "force-dynamic";
 
 export default async function PurchasingPage() {
-  const { user, vendors, projects, purchaseOrders, bills } =
+  const { user, vendors, clients, projects, purchaseOrders, bills } =
     await getPurchasingPageData();
 
   return (
@@ -19,6 +19,7 @@ export default async function PurchasingPage() {
 
       <PurchasingManagement
         vendors={vendors}
+        clients={clients}
         projects={projects}
         purchaseOrders={purchaseOrders}
         bills={bills}
