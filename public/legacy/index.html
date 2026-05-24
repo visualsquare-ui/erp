@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visual Square | Design & Printing Studio</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Loader -->
+    <div class="loader">
+        <div class="loader-inner">
+            <img src="logo-white.png" alt="Visual Square" class="loader-logo">
+        </div>
+    </div>
+
+    <!-- Custom Cursor -->
+    <div class="cursor"></div>
+    <div class="cursor-follower"></div>
+
+    <!-- Navigation -->
+    <nav class="nav">
+        <a href="#" class="nav-logo">
+            <img src="logo.png" alt="Visual Square" class="logo-img">
+        </a>
+        <div class="nav-links">
+            <a href="#services" class="nav-link" data-en="Services" data-ko="서비스">Services</a>
+            <a href="#portfolio" class="nav-link" data-en="Portfolio" data-ko="포트폴리오">Portfolio</a>
+            <a href="#about" class="nav-link" data-en="About" data-ko="소개">About</a>
+            <a href="#contact" class="nav-link nav-link-cta" data-en="Get in Touch" data-ko="문의하기">Get in Touch</a>
+            <button class="lang-toggle" aria-label="Toggle Language">
+                <span class="lang-label">KR</span>
+            </button>
+        </div>
+        <button class="nav-toggle" aria-label="Menu">
+            <span></span>
+            <span></span>
+        </button>
+    </nav>
+
+    <!-- Mobile Menu -->
+    <div class="mobile-menu">
+        <div class="mobile-menu-inner">
+            <a href="#services" class="mobile-link" data-en="Services" data-ko="서비스">Services</a>
+            <a href="#portfolio" class="mobile-link" data-en="Portfolio" data-ko="포트폴리오">Portfolio</a>
+            <a href="#about" class="mobile-link" data-en="About" data-ko="소개">About</a>
+            <a href="#contact" class="mobile-link" data-en="Contact" data-ko="문의">Contact</a>
+            <button class="lang-toggle mobile-lang" aria-label="Toggle Language">
+                <span class="lang-label">KR</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="hero-bg">
+            <div class="hero-grid"></div>
+        </div>
+        <div class="hero-content">
+            <div class="hero-tag">
+                <span class="tag-line"></span>
+                <span class="tag-text" data-en="Brand, Web & Print Studio" data-ko="브랜드, 웹 & 프린트 스튜디오">Brand, Web & Print Studio</span>
+            </div>
+            <h1 class="hero-title" aria-live="polite">
+                <span class="title-line">
+                    <span class="title-word">Design</span>
+                    <span class="title-word">Systems</span>
+                </span>
+                <span class="title-line">
+                    <span class="title-word">That</span>
+                    <span class="title-word accent">Print</span>
+                </span>
+                <span class="title-line">
+                    <span class="title-word">Beautifully</span>
+                </span>
+            </h1>
+            <p class="hero-desc" data-en="From websites and brand identity to business cards, signage, catalogs, and custom print production, we shape the visual details your customers remember." data-ko="웹사이트와 브랜드 아이덴티티부터 명함, 사인, 카탈로그, 맞춤 인쇄 제작까지 고객이 기억하는 비주얼 디테일을 만듭니다.">
+                From websites and brand identity to business cards, signage, catalogs, and custom print production, we shape the visual details your customers remember.
+            </p>
+            <div class="hero-proof" aria-label="Studio highlights">
+                <span data-en="Web" data-ko="웹">Web</span>
+                <span data-en="Branding" data-ko="브랜딩">Branding</span>
+                <span data-en="Print" data-ko="인쇄">Print</span>
+                <span data-en="Production" data-ko="제작">Production</span>
+            </div>
+            <div class="hero-cta">
+                <a href="#portfolio" class="btn btn-primary">
+                    <span data-en="View Our Work" data-ko="작업 보기">View Our Work</span>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M7 17L17 7M17 7H7M17 7V17"/>
+                    </svg>
+                </a>
+                <a href="#contact" class="btn btn-secondary" data-en="Start a Project" data-ko="프로젝트 시작하기">Start a Project</a>
+            </div>
+        </div>
+        <div class="hero-card" aria-hidden="true">
+            <div class="hero-card-top">
+                <span>Visual Square</span>
+                <span>Studio proof</span>
+            </div>
+            <div class="hero-card-mark">VS</div>
+            <div class="hero-card-grid">
+                <span>Logo</span>
+                <span>Cards</span>
+                <span>Web</span>
+                <span>Signs</span>
+            </div>
+        </div>
+        <div class="hero-scroll">
+            <span data-en="Scroll to explore" data-ko="스크롤하여 탐색">Scroll to explore</span>
+            <div class="scroll-line"></div>
+        </div>
+    </section>
+
+    <!-- Services Section -->
+    <section id="services" class="services">
+        <div class="section-header">
+            <span class="section-number">01</span>
+            <h2 class="section-title" data-en="What We <span class='accent'>Do</span>" data-ko="우리가 하는 <span class='accent'>일</span>">What We <span class="accent">Do</span></h2>
+            <p class="section-desc" data-en="One studio for digital design and physical production, so your brand feels consistent everywhere it appears." data-ko="디지털 디자인과 실제 제작을 한 곳에서 연결해 브랜드가 어디서 보이든 일관되게 느껴지도록 만듭니다.">One studio for digital design and physical production, so your brand feels consistent everywhere it appears.</p>
+        </div>
+        <div class="services-grid">
+            <article class="service-card" data-service="web">
+                <div class="service-icon">
+                    <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <rect x="8" y="8" width="48" height="36" rx="4"/>
+                        <path d="M8 18H56"/>
+                        <circle cx="14" cy="13" r="2"/>
+                        <circle cx="22" cy="13" r="2"/>
+                        <circle cx="30" cy="13" r="2"/>
+                        <path d="M24 56H40"/>
+                        <path d="M32 44V56"/>
+                    </svg>
+                </div>
+                <h3 class="service-title" data-en="Web Design" data-ko="웹 디자인">Web Design</h3>
+                <p class="service-desc" data-en="Responsive websites, landing pages, and UI/UX design to make your brand shine in the digital space." data-ko="반응형 웹사이트, 랜딩 페이지, UI/UX 디자인으로 디지털 공간에서 브랜드를 빛나게 합니다.">
+                    Responsive websites, landing pages, and UI/UX design
+                    to make your brand shine in the digital space.
+                </p>
+                <ul class="service-list">
+                    <li data-en="Website Design" data-ko="웹사이트 디자인">Website Design</li>
+                    <li data-en="Landing Pages" data-ko="랜딩 페이지">Landing Pages</li>
+                    <li data-en="UI/UX Design" data-ko="UI/UX 디자인">UI/UX Design</li>
+                    <li data-en="E-commerce" data-ko="이커머스">E-commerce</li>
+                </ul>
+            </article>
+            <article class="service-card" data-service="print">
+                <div class="service-icon">
+                    <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <rect x="12" y="4" width="40" height="56" rx="2"/>
+                        <path d="M20 12H44"/>
+                        <path d="M20 20H44"/>
+                        <path d="M20 28H36"/>
+                        <rect x="20" y="36" width="24" height="16" rx="1"/>
+                    </svg>
+                </div>
+                <h3 class="service-title" data-en="Print Design" data-ko="인쇄 디자인">Print Design</h3>
+                <p class="service-desc" data-en="Business cards, brochures, catalogs, flyers, and more — we design every print material you can touch." data-ko="명함, 브로셔, 카탈로그, 전단지 등 — 손으로 만질 수 있는 모든 인쇄물을 디자인합니다.">
+                    Business cards, brochures, catalogs, flyers, and more —
+                    we design every print material you can touch.
+                </p>
+                <ul class="service-list">
+                    <li data-en="Business Cards" data-ko="명함">Business Cards</li>
+                    <li data-en="Brochures & Catalogs" data-ko="브로셔 & 카탈로그">Brochures & Catalogs</li>
+                    <li data-en="Flyers & Posters" data-ko="전단지 & 포스터">Flyers & Posters</li>
+                    <li data-en="Banners & Signs" data-ko="배너 & 간판">Banners & Signs</li>
+                </ul>
+            </article>
+            <article class="service-card" data-service="branding">
+                <div class="service-icon">
+                    <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M32 4L4 20V44L32 60L60 44V20L32 4Z"/>
+                        <path d="M32 4V28"/>
+                        <path d="M32 28L60 20"/>
+                        <path d="M32 28L4 20"/>
+                        <path d="M32 28V60"/>
+                    </svg>
+                </div>
+                <h3 class="service-title" data-en="Advertising" data-ko="광고 디자인">Advertising</h3>
+                <p class="service-desc" data-en="From brand identity to ad campaigns, we deliver cohesive visual strategies." data-ko="브랜드 아이덴티티부터 광고 캠페인까지, 일관된 비주얼 전략을 제공합니다.">
+                    From brand identity to ad campaigns,
+                    we deliver cohesive visual strategies.
+                </p>
+                <ul class="service-list">
+                    <li data-en="Brand Identity" data-ko="브랜드 아이덴티티">Brand Identity</li>
+                    <li data-en="Ad Campaigns" data-ko="광고 캠페인">Ad Campaigns</li>
+                    <li data-en="Social Media" data-ko="소셜 미디어">Social Media</li>
+                    <li data-en="Marketing Materials" data-ko="마케팅 자료">Marketing Materials</li>
+                </ul>
+            </article>
+            <article class="service-card" data-service="uniform">
+                <div class="service-icon">
+                    <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M20 8L12 16V56H52V16L44 8"/>
+                        <path d="M20 8C20 8 24 12 32 12C40 12 44 8 44 8"/>
+                        <path d="M20 8V4H44V8"/>
+                        <path d="M24 24H40"/>
+                        <path d="M24 32H40"/>
+                        <path d="M24 40H32"/>
+                    </svg>
+                </div>
+                <h3 class="service-title" data-en="Custom Printing" data-ko="맞춤 인쇄">Custom Printing</h3>
+                <p class="service-desc" data-en="Uniforms, promotional products, and specialty prints — custom-made production services tailored to your needs." data-ko="유니폼, 판촉물, 특수 인쇄 — 고객 맞춤형 제작 서비스를 제공합니다.">
+                    Uniforms, promotional products, and specialty prints —
+                    custom-made production services tailored to your needs.
+                </p>
+                <ul class="service-list">
+                    <li data-en="Uniforms & Apparel" data-ko="유니폼 & 의류">Uniforms & Apparel</li>
+                    <li data-en="Promotional Items" data-ko="판촉물">Promotional Items</li>
+                    <li data-en="Large Format" data-ko="대형 인쇄">Large Format</li>
+                    <li data-en="Specialty Printing" data-ko="특수 인쇄">Specialty Printing</li>
+                </ul>
+            </article>
+        </div>
+    </section>
+
+    <!-- Portfolio Section -->
+    <section id="portfolio" class="portfolio">
+        <div class="section-header">
+            <span class="section-number">02</span>
+            <h2 class="section-title" data-en="Selected <span class='accent'>Work</span>" data-ko="주요 <span class='accent'>작업</span>">Selected <span class="accent">Work</span></h2>
+            <p class="section-desc" data-en="A sample of the visual systems, print pieces, and web experiences we create for local businesses." data-ko="로컬 비즈니스를 위해 만든 비주얼 시스템, 인쇄물, 웹 경험의 예시입니다.">A sample of the visual systems, print pieces, and web experiences we create for local businesses.</p>
+        </div>
+        <div class="portfolio-filter">
+            <button class="filter-btn active" data-filter="all" data-en="All" data-ko="전체">All</button>
+            <button class="filter-btn" data-filter="web" data-en="Web" data-ko="웹">Web</button>
+            <button class="filter-btn" data-filter="print" data-en="Print" data-ko="인쇄">Print</button>
+            <button class="filter-btn" data-filter="branding" data-en="Branding" data-ko="브랜딩">Branding</button>
+        </div>
+        <div class="portfolio-grid">
+            <article class="portfolio-item" data-category="branding">
+                <div class="portfolio-img">
+                    <img src="https://images.unsplash.com/photo-1626785774573-4b799315345d?w=800&q=80" alt="Brand Identity Project">
+                    <div class="portfolio-overlay">
+                        <span class="portfolio-cat" data-en="Branding" data-ko="브랜딩">Branding</span>
+                        <h3 class="portfolio-title" data-en="Modern Brand Identity" data-ko="모던 브랜드 아이덴티티">Modern Brand Identity</h3>
+                    </div>
+                </div>
+            </article>
+            <article class="portfolio-item" data-category="print">
+                <div class="portfolio-img">
+                    <img src="https://images.unsplash.com/photo-1531256456869-ce942a665e80?w=800&q=80" alt="Business Card Design">
+                    <div class="portfolio-overlay">
+                        <span class="portfolio-cat" data-en="Print Design" data-ko="인쇄 디자인">Print Design</span>
+                        <h3 class="portfolio-title" data-en="Premium Business Cards" data-ko="프리미엄 명함">Premium Business Cards</h3>
+                    </div>
+                </div>
+            </article>
+            <article class="portfolio-item" data-category="web">
+                <div class="portfolio-img">
+                    <img src="https://images.unsplash.com/photo-1559028012-481c04fa702d?w=800&q=80" alt="Web Design Project">
+                    <div class="portfolio-overlay">
+                        <span class="portfolio-cat" data-en="Web Design" data-ko="웹 디자인">Web Design</span>
+                        <h3 class="portfolio-title" data-en="E-commerce Platform" data-ko="이커머스 플랫폼">E-commerce Platform</h3>
+                    </div>
+                </div>
+            </article>
+            <article class="portfolio-item" data-category="print">
+                <div class="portfolio-img">
+                    <img src="https://images.unsplash.com/photo-1586717791821-3f44a563fa4c?w=800&q=80" alt="Brochure Design">
+                    <div class="portfolio-overlay">
+                        <span class="portfolio-cat" data-en="Print Design" data-ko="인쇄 디자인">Print Design</span>
+                        <h3 class="portfolio-title" data-en="Corporate Brochure" data-ko="기업 브로셔">Corporate Brochure</h3>
+                    </div>
+                </div>
+            </article>
+            <article class="portfolio-item" data-category="branding">
+                <div class="portfolio-img">
+                    <img src="https://images.unsplash.com/photo-1558655146-d09347e92766?w=800&q=80" alt="Logo Design">
+                    <div class="portfolio-overlay">
+                        <span class="portfolio-cat" data-en="Branding" data-ko="브랜딩">Branding</span>
+                        <h3 class="portfolio-title" data-en="Logo & Visual System" data-ko="로고 & 비주얼 시스템">Logo & Visual System</h3>
+                    </div>
+                </div>
+            </article>
+            <article class="portfolio-item" data-category="web">
+                <div class="portfolio-img">
+                    <img src="https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&q=80" alt="Dashboard Design">
+                    <div class="portfolio-overlay">
+                        <span class="portfolio-cat" data-en="Web Design" data-ko="웹 디자인">Web Design</span>
+                        <h3 class="portfolio-title" data-en="Analytics Dashboard" data-ko="애널리틱스 대시보드">Analytics Dashboard</h3>
+                    </div>
+                </div>
+            </article>
+            <article class="portfolio-item" data-category="print">
+                <div class="portfolio-img">
+                    <img src="https://images.unsplash.com/photo-1561070791-2526d30994b5?w=800&q=80" alt="Poster Design">
+                    <div class="portfolio-overlay">
+                        <span class="portfolio-cat" data-en="Print Design" data-ko="인쇄 디자인">Print Design</span>
+                        <h3 class="portfolio-title" data-en="Event Poster Series" data-ko="이벤트 포스터 시리즈">Event Poster Series</h3>
+                    </div>
+                </div>
+            </article>
+            <article class="portfolio-item" data-category="branding">
+                <div class="portfolio-img">
+                    <img src="https://images.unsplash.com/photo-1600880292203-757bb62b4baf?w=800&q=80" alt="Brand Guidelines">
+                    <div class="portfolio-overlay">
+                        <span class="portfolio-cat" data-en="Branding" data-ko="브랜딩">Branding</span>
+                        <h3 class="portfolio-title" data-en="Brand Guidelines" data-ko="브랜드 가이드라인">Brand Guidelines</h3>
+                    </div>
+                </div>
+            </article>
+        </div>
+    </section>
+
+    <!-- About Section -->
+    <section id="about" class="about">
+        <div class="about-content">
+            <div class="section-header">
+                <span class="section-number">03</span>
+                <h2 class="section-title" data-en="About <span class='accent'>Us</span>" data-ko="회사 <span class='accent'>소개</span>">About <span class="accent">Us</span></h2>
+                <p class="section-desc" data-en="Small enough to care about every detail. Experienced enough to carry the whole job." data-ko="모든 디테일을 챙길 만큼 가깝고, 전체 작업을 책임질 만큼 경험 있는 스튜디오입니다.">Small enough to care about every detail. Experienced enough to carry the whole job.</p>
+            </div>
+            <div class="about-text">
+                <p class="about-lead" data-en="Visual Square goes beyond the boundaries of design and print<br>to complete your brand's <span class='accent'>visual story</span>." data-ko="Visual Square는 디자인과 인쇄의 경계를 넘어<br>브랜드의 <span class='accent'>비주얼 스토리</span>를 완성합니다.">
+                    Visual Square goes beyond the boundaries of design and print<br>
+                    to complete your brand's <span class="accent">visual story</span>.
+                </p>
+                <p data-en="Every website, every business card should carry your brand's philosophy. We create consistent brand experiences through the harmony of digital and analog. Based in Fort Lee, we partner with diverse businesses across New Jersey and New York." data-ko="모든 웹사이트, 모든 명함에는 브랜드의 철학이 담겨야 합니다. 디지털과 아날로그의 조화를 통해 일관된 브랜드 경험을 만들어 갑니다. Fort Lee를 기반으로 뉴저지와 뉴욕의 다양한 비즈니스와 함께합니다.">
+                    Every website, every business card should carry your brand's philosophy.
+                    We create consistent brand experiences through the harmony of digital and analog.
+                    Based in Fort Lee, we partner with diverse businesses across New Jersey and New York.
+                </p>
+            </div>
+            <div class="about-stats">
+                <div class="stat">
+                    <span class="stat-number" data-count="500">0</span>
+                    <span class="stat-label" data-en="Projects Completed" data-ko="완료된 프로젝트">Projects Completed</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-number" data-count="150">0</span>
+                    <span class="stat-label" data-en="Happy Clients" data-ko="만족한 고객">Happy Clients</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-number" data-count="10">0</span>
+                    <span class="stat-label" data-en="Years Experience" data-ko="년 경력">Years Experience</span>
+                </div>
+            </div>
+        </div>
+        <div class="about-visual">
+            <div class="about-img-wrap">
+                <img src="https://images.unsplash.com/photo-1542744094-3a31f272c490?w=800&q=80" alt="Our Studio">
+                <div class="about-img-accent"></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Contact Section -->
+    <section id="contact" class="contact">
+        <div class="contact-info">
+            <div class="section-header">
+                <span class="section-number">04</span>
+                <h2 class="section-title" data-en="Let's <span class='accent'>Talk</span>" data-ko="<span class='accent'>문의</span>하기">Let's <span class="accent">Talk</span></h2>
+                <p class="section-desc" data-en="Tell us what you are making. We will help shape the right design and production path." data-ko="무엇을 만들고 싶은지 알려주세요. 필요한 디자인과 제작 방향을 함께 정리해드립니다.">Tell us what you are making. We will help shape the right design and production path.</p>
+            </div>
+            <p class="contact-lead" data-en="Have a new project in mind?<br>Get in touch with us today." data-ko="새로운 프로젝트가 있으신가요?<br>지금 바로 연락주세요.">
+                Have a new project in mind?<br>
+                Get in touch with us today.
+            </p>
+            <div class="contact-details">
+                <div class="contact-item">
+                    <span class="contact-label" data-en="Address" data-ko="주소">Address</span>
+                    <address>
+                        2160 N Central Rd.<br>
+                        Fort Lee, NJ 07024
+                    </address>
+                </div>
+                <div class="contact-item">
+                    <span class="contact-label" data-en="Phone" data-ko="전화">Phone</span>
+                    <a href="tel:201-500-8842">201-500-8842</a>
+                </div>
+                <div class="contact-item">
+                    <span class="contact-label" data-en="Email" data-ko="이메일">Email</span>
+                    <a href="mailto:hello@visualsquare.com">hello@visualsquare.com</a>
+                </div>
+            </div>
+        </div>
+        <form class="contact-form" action="https://formspree.io/f/hello@visualsquare.com" method="POST">
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="name" data-en="Name" data-ko="이름">Name</label>
+                    <input type="text" id="name" name="name" required>
+                </div>
+                <div class="form-group">
+                    <label for="email" data-en="Email" data-ko="이메일">Email</label>
+                    <input type="email" id="email" name="email" required>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="service" data-en="Service" data-ko="서비스">Service</label>
+                <select id="service" name="service">
+                    <option value="" data-en="Select a service" data-ko="서비스 선택">Select a service</option>
+                    <option value="web" data-en="Web Design" data-ko="웹 디자인">Web Design</option>
+                    <option value="print" data-en="Print Design" data-ko="인쇄 디자인">Print Design</option>
+                    <option value="branding" data-en="Branding & Advertising" data-ko="브랜딩 & 광고">Branding & Advertising</option>
+                    <option value="custom" data-en="Custom Printing" data-ko="맞춤 인쇄">Custom Printing</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="message" data-en="Message" data-ko="메시지">Message</label>
+                <textarea id="message" name="message" rows="5" required></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary btn-full">
+                <span data-en="Send Message" data-ko="메시지 보내기">Send Message</span>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M22 2L11 13M22 2L15 22L11 13M22 2L2 9L11 13"/>
+                </svg>
+            </button>
+        </form>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-top">
+            <div class="footer-brand">
+                <img src="logo-white.png" alt="Visual Square" class="footer-logo">
+                <p data-en="Design & Printing Studio in Fort Lee, NJ" data-ko="뉴저지 포트리 소재 디자인 & 프린팅 스튜디오">Design & Printing Studio in Fort Lee, NJ</p>
+            </div>
+            <div class="footer-links">
+                <div class="footer-col">
+                    <h4 data-en="Services" data-ko="서비스">Services</h4>
+                    <a href="#services" data-en="Web Design" data-ko="웹 디자인">Web Design</a>
+                    <a href="#services" data-en="Print Design" data-ko="인쇄 디자인">Print Design</a>
+                    <a href="#services" data-en="Advertising" data-ko="광고">Advertising</a>
+                    <a href="#services" data-en="Custom Printing" data-ko="맞춤 인쇄">Custom Printing</a>
+                </div>
+                <div class="footer-col">
+                    <h4 data-en="Company" data-ko="회사">Company</h4>
+                    <a href="#about" data-en="About Us" data-ko="회사 소개">About Us</a>
+                    <a href="#portfolio" data-en="Portfolio" data-ko="포트폴리오">Portfolio</a>
+                    <a href="#contact" data-en="Contact" data-ko="문의">Contact</a>
+                </div>
+                <div class="footer-col">
+                    <h4 data-en="Print Services" data-ko="인쇄 서비스">Print Services</h4>
+                    <a href="#" data-en="Business Cards" data-ko="명함">Business Cards</a>
+                    <a href="#" data-en="Brochures" data-ko="브로셔">Brochures</a>
+                    <a href="#" data-en="Posters & Banners" data-ko="포스터 & 배너">Posters & Banners</a>
+                    <a href="#" data-en="Uniforms" data-ko="유니폼">Uniforms</a>
+                </div>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>&copy; 2026 Visual Square. All rights reserved.</p>
+            <div class="footer-social">
+                <a href="#" aria-label="Instagram">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="2" y="2" width="20" height="20" rx="5"/>
+                        <circle cx="12" cy="12" r="4"/>
+                        <circle cx="18" cy="6" r="1"/>
+                    </svg>
+                </a>
+                <a href="#" aria-label="Facebook">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M18 2H15C13.6739 2 12.4021 2.52678 11.4645 3.46447C10.5268 4.40215 10 5.67392 10 7V10H7V14H10V22H14V14H17L18 10H14V7C14 6.73478 14.1054 6.48043 14.2929 6.29289C14.4804 6.10536 14.7348 6 15 6H18V2Z"/>
+                    </svg>
+                </a>
+                <a href="#" aria-label="LinkedIn">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M16 8C17.5913 8 19.1174 8.63214 20.2426 9.75736C21.3679 10.8826 22 12.4087 22 14V21H18V14C18 13.4696 17.7893 12.9609 17.4142 12.5858C17.0391 12.2107 16.5304 12 16 12C15.4696 12 14.9609 12.2107 14.5858 12.5858C14.2107 12.9609 14 13.4696 14 14V21H10V14C10 12.4087 10.6321 10.8826 11.7574 9.75736C12.8826 8.63214 14.4087 8 16 8Z"/>
+                        <rect x="2" y="9" width="4" height="12"/>
+                        <circle cx="4" cy="4" r="2"/>
+                    </svg>
+                </a>
+            </div>
+        </div>
+    </footer>
+
+    <script src="script.js?v=4"></script>
+</body>
+</html>
