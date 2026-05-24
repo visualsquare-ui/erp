@@ -31,11 +31,29 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: "weekly",
       priority: 0.8,
     },
+    {
+      url: `${siteUrl}/ko/industries`,
+      lastModified: now,
+      changeFrequency: "weekly",
+      priority: 0.85,
+    },
+    {
+      url: `${siteUrl}/ko/blog`,
+      lastModified: now,
+      changeFrequency: "weekly",
+      priority: 0.75,
+    },
     ...industryPages.map((industry) => ({
       url: `${siteUrl}/industries/${industry.slug}`,
       lastModified: now,
       changeFrequency: "weekly" as const,
       priority: 0.85,
+    })),
+    ...industryPages.map((industry) => ({
+      url: `${siteUrl}/ko/industries/${industry.slug}`,
+      lastModified: now,
+      changeFrequency: "weekly" as const,
+      priority: 0.8,
     })),
     ...getPublishedBlogPosts(now).map((post) => ({
       url: `${siteUrl}/blog/${post.slug}`,
@@ -43,5 +61,13 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: "monthly" as const,
       priority: 0.7,
     })),
+    ...getPublishedBlogPosts(now)
+      .filter((post) => post.language === "ko")
+      .map((post) => ({
+        url: `${siteUrl}/ko/blog/${post.slug}`,
+        lastModified: new Date(post.publishDate),
+        changeFrequency: "monthly" as const,
+        priority: 0.7,
+      })),
   ];
 }

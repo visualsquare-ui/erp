@@ -5,10 +5,40 @@ import {
   studioProcessSteps,
   type BlogPost,
   type IndustryPage,
+  type Language,
   type StudioProcessStep,
 } from "@/content/marketing-content";
 
-export function StudioHeroVisual() {
+const visualLabels = {
+  en: {
+    launchPreview: "Launch kit preview",
+    launchPreviewBody:
+      "Website, brand guide, service menu, cards, social assets, and production-ready print files.",
+    brand: "Brand",
+    web: "Web",
+    print: "Print",
+    explore: "Explore the system",
+    decision: "Decision point",
+    output: "Output",
+    stepFocus: "Step focus",
+  },
+  ko: {
+    launchPreview: "런치 키트 미리보기",
+    launchPreviewBody:
+      "웹사이트, 브랜드 가이드, 서비스 메뉴, 카드, 소셜 콘텐츠, 인쇄 제작용 파일.",
+    brand: "브랜드",
+    web: "웹",
+    print: "인쇄",
+    explore: "시스템 보기",
+    decision: "결정 포인트",
+    output: "결과물",
+    stepFocus: "단계 포인트",
+  },
+} satisfies Record<Language, Record<string, string>>;
+
+export function StudioHeroVisual({ language = "en" }: { language?: Language }) {
+  const copy = visualLabels[language];
+
   return (
     <figure className="relative overflow-hidden border border-[var(--border)] bg-[var(--surface)]">
       <Image
@@ -21,15 +51,14 @@ export function StudioHeroVisual() {
       />
       <figcaption className="absolute inset-x-4 bottom-4 border border-white/60 bg-white/88 p-4 backdrop-blur">
         <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--coral-strong)]">
-          Launch kit preview
+          {copy.launchPreview}
         </p>
         <p className="mt-1 text-sm font-semibold text-[var(--foreground)]">
-          Website, brand guide, service menu, cards, social assets, and
-          production-ready print files.
+          {copy.launchPreviewBody}
         </p>
       </figcaption>
       <div className="absolute left-4 top-4 hidden gap-2 sm:flex">
-        {["Brand", "Web", "Print"].map((label) => (
+        {[copy.brand, copy.web, copy.print].map((label) => (
           <span
             key={label}
             className="border border-white/60 bg-white/88 px-3 py-1 text-xs font-semibold uppercase tracking-[0.1em] text-[var(--foreground)] backdrop-blur"
@@ -95,9 +124,12 @@ export function IndustryPreview({
 }
 
 export function IndustryCard({ industry }: { industry: IndustryPage }) {
+  const language = industry.language ?? "en";
+  const copy = visualLabels[language];
+
   return (
     <Link
-      href={`/industries/${industry.slug}`}
+      href={`${language === "ko" ? "/ko" : ""}/industries/${industry.slug}`}
       className="group grid min-h-[24rem] border border-[var(--border)] bg-white transition-colors hover:border-[var(--coral)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--coral)]"
     >
       <IndustryPreview industry={industry} compact />
@@ -108,7 +140,7 @@ export function IndustryCard({ industry }: { industry: IndustryPage }) {
         <h2 className="mt-3 text-2xl font-semibold">{industry.name}</h2>
         <p className="mt-3 leading-7 text-[var(--muted)]">{industry.description}</p>
         <p className="mt-5 text-sm font-semibold group-hover:text-[var(--coral-strong)]">
-          Explore the system
+          {copy.explore}
         </p>
       </div>
     </Link>
@@ -118,7 +150,7 @@ export function IndustryCard({ industry }: { industry: IndustryPage }) {
 export function EditorialCard({ post }: { post: BlogPost }) {
   return (
     <Link
-      href={`/blog/${post.slug}`}
+      href={`${post.language === "ko" ? "/ko" : ""}/blog/${post.slug}`}
       className="group border border-[var(--border)] bg-white p-5 transition-colors hover:border-[var(--coral)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--coral)]"
     >
       <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">
@@ -142,12 +174,16 @@ export function StudioProcessFlow({
   eyebrow = "How projects move",
   title = "From owner ideas to launch-ready assets.",
   description = "The goal is not to force a preset style. We first organize what the owner wants, diagnose what the business needs, compare directions, choose the strongest path, and keep improving the brand after launch.",
+  language = "en",
 }: {
   steps?: StudioProcessStep[];
   eyebrow?: string;
   title?: string;
   description?: string;
+  language?: Language;
 }) {
+  const copy = visualLabels[language];
+
   return (
     <section className="border-y border-[var(--border)] bg-white">
       <div className="mx-auto max-w-[76rem] px-4 py-12 sm:px-6 lg:px-8">
@@ -170,7 +206,7 @@ export function StudioProcessFlow({
             <article
               key={step.number}
               className={`group relative flex min-h-64 flex-col border p-5 transition duration-200 ease-out hover:z-10 hover:-translate-y-1 hover:scale-[1.03] hover:bg-white ${
-                step.title === "Direction options"
+                step.number === "04"
                   ? "border-[var(--coral)] bg-[var(--coral-quiet)] hover:border-[var(--coral-strong)]"
                   : "border-[var(--border)] bg-[var(--surface)] hover:border-[var(--border-strong)]"
               }`}
@@ -179,9 +215,9 @@ export function StudioProcessFlow({
                 <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">
                   {step.number}
                 </p>
-                {step.title === "Direction options" ? (
+                {step.number === "04" ? (
                   <p className="text-xs font-semibold uppercase tracking-[0.1em] text-[var(--coral-strong)]">
-                    Decision point
+                    {copy.decision}
                   </p>
                 ) : null}
               </div>
@@ -192,10 +228,10 @@ export function StudioProcessFlow({
                 {step.description}
               </p>
               <p className="mt-5 border-t border-[var(--border)] pt-3 text-sm font-semibold text-[var(--coral-strong)]">
-                Output: {step.output}
+                {copy.output}: {step.output}
               </p>
               <p className="mt-2 text-xs font-semibold uppercase tracking-[0.1em] text-[var(--muted)] opacity-0 transition-opacity duration-200 group-hover:opacity-100">
-                Step focus
+                {copy.stepFocus}
               </p>
             </article>
           ))}

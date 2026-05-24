@@ -9,7 +9,9 @@ import {
   formatPublishDate,
   getBlogPost,
   getIndustryPage,
+  getLocalizedIndustryPage,
   getSiteUrl,
+  type Language,
 } from "@/content/marketing-content";
 
 export const dynamic = "force-dynamic";
@@ -17,6 +19,33 @@ export const dynamic = "force-dynamic";
 type PageProps = {
   params: Promise<{ slug: string }>;
 };
+
+const articleCopy = {
+  en: {
+    studioTake: "Studio take",
+    shortAnswer: "Short answer",
+    remember: "What to remember",
+    support: "Decision support",
+    related: "Related service",
+    viewIndustry: "View industry page",
+    workTitle: "Work with Visual Square",
+    workBody:
+      "Planning a launch or refresh in New York or New Jersey? We can help with brand identity, website design, print materials, and production-ready files.",
+    minRead: "min read",
+  },
+  ko: {
+    studioTake: "스튜디오 의견",
+    shortAnswer: "짧은 답변",
+    remember: "기억할 점",
+    support: "결정에 도움이 되는 질문",
+    related: "관련 서비스",
+    viewIndustry: "업종별 페이지 보기",
+    workTitle: "Visual Square와 함께 작업하기",
+    workBody:
+      "뉴욕 또는 뉴저지에서 오픈이나 리뉴얼을 준비 중이라면 브랜드 아이덴티티, 웹사이트, 인쇄물, 제작용 파일을 함께 준비할 수 있습니다.",
+    minRead: "분 읽기",
+  },
+} satisfies Record<Language, Record<string, string>>;
 
 export function generateStaticParams() {
   return blogPosts.map((post) => ({ slug: post.slug }));
@@ -48,15 +77,24 @@ export async function generateMetadata({
   };
 }
 
-export default async function BlogPostPage({ params }: PageProps) {
-  const { slug } = await params;
+export async function BlogPostContent({
+  slug,
+  language = "en",
+}: {
+  slug: string;
+  language?: Language;
+}) {
   const post = getBlogPost(slug);
 
   if (!post || new Date(post.publishDate) > new Date()) {
     notFound();
   }
 
-  const industry = getIndustryPage(post.industrySlug);
+  const industry =
+    language === "ko"
+      ? getLocalizedIndustryPage(post.industrySlug, "ko")
+      : getIndustryPage(post.industrySlug);
+  const copy = articleCopy[language];
   const siteUrl = getSiteUrl();
   const articleSchema = {
     "@context": "https://schema.org",
@@ -89,7 +127,10 @@ export default async function BlogPostPage({ params }: PageProps) {
   };
 
   return (
-    <MarketingShell>
+    <MarketingShell
+      language={language}
+      currentPath={`${language === "ko" ? "/ko" : ""}/blog/${post.slug}`}
+    >
       <article>
         <script
           type="application/ld+json"
@@ -113,7 +154,7 @@ export default async function BlogPostPage({ params }: PageProps) {
                 {post.description}
               </p>
               <p className="mt-5 text-sm font-semibold text-[var(--muted)]">
-                {post.readingMinutes} min read · {post.language.toUpperCase()}
+                {post.readingMinutes} {copy.minRead} · {post.language.toUpperCase()}
               </p>
             </div>
             {industry ? <IndustryPreview industry={industry} compact /> : null}
@@ -124,14 +165,14 @@ export default async function BlogPostPage({ params }: PageProps) {
           <div className="min-w-0">
             <section className="border-l-2 border-[var(--coral)] bg-[var(--surface)] p-5">
               <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--coral-strong)]">
-                Studio take
+                {copy.studioTake}
               </p>
-              <h2 className="mt-3 text-2xl font-semibold">Short answer</h2>
+              <h2 className="mt-3 text-2xl font-semibold">{copy.shortAnswer}</h2>
               <p className="mt-3 leading-8 text-[var(--muted)]">{post.summary}</p>
             </section>
 
             <section className="mt-10 border border-[var(--foreground)] bg-[var(--foreground)] p-5 text-white">
-              <h2 className="text-xl font-semibold">What to remember</h2>
+              <h2 className="text-xl font-semibold">{copy.remember}</h2>
               <ul className="mt-4 space-y-3 leading-7 text-white/72">
                 {post.keyPoints.map((point) => (
                   <li key={point} className="border-b border-white/14 pb-3 last:border-b-0 last:pb-0">
@@ -165,7 +206,7 @@ export default async function BlogPostPage({ params }: PageProps) {
 
             <section className="mt-12">
               <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--coral-strong)]">
-                Decision support
+                {copy.support}
               </p>
               <h2 className="mt-3 text-3xl font-semibold">FAQ</h2>
               <div className="mt-5 space-y-4">
@@ -184,7 +225,7 @@ export default async function BlogPostPage({ params }: PageProps) {
           <aside className="lg:sticky lg:top-6 lg:self-start">
             <div className="border border-[var(--border)] bg-[var(--surface)] p-5">
               <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">
-                Related service
+                {copy.related}
               </p>
               {industry ? (
                 <>
@@ -193,20 +234,18 @@ export default async function BlogPostPage({ params }: PageProps) {
                     {industry.description}
                   </p>
                   <Link
-                    href={`/industries/${industry.slug}`}
+                    href={`${language === "ko" ? "/ko" : ""}/industries/${industry.slug}`}
                     className="mt-5 inline-flex border border-[var(--coral)] bg-[var(--coral)] px-4 py-2 text-sm font-semibold text-white hover:bg-[var(--coral-strong)]"
                   >
-                    View industry page
+                    {copy.viewIndustry}
                   </Link>
                 </>
               ) : null}
             </div>
             <div className="mt-4 border border-[var(--coral)] bg-[var(--coral-quiet)] p-5">
-              <h2 className="text-xl font-semibold">Work with Visual Square</h2>
+              <h2 className="text-xl font-semibold">{copy.workTitle}</h2>
               <p className="mt-3 text-sm leading-6 text-[var(--muted)]">
-                Planning a launch or refresh in New York or New Jersey? We can
-                help with brand identity, website design, print materials, and
-                production-ready files.
+                {copy.workBody}
               </p>
             </div>
           </aside>
@@ -214,4 +253,9 @@ export default async function BlogPostPage({ params }: PageProps) {
       </article>
     </MarketingShell>
   );
+}
+
+export default async function BlogPostPage({ params }: PageProps) {
+  const { slug } = await params;
+  return <BlogPostContent slug={slug} />;
 }

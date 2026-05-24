@@ -2,6 +2,7 @@ export type Language = "en" | "ko";
 
 export type IndustryPage = {
   slug: string;
+  language?: Language;
   name: string;
   eyebrow: string;
   title: string;
@@ -711,6 +712,250 @@ export const industryPages: IndustryPage[] = [
     ],
   },
 ];
+
+type IndustryKoOverride = Omit<IndustryPage, "slug" | "visualTheme" | "language"> & {
+  visualTheme: Pick<IndustryPage["visualTheme"], "mood" | "previewItems">;
+};
+
+const processTitlesKo = [
+  "문의",
+  "비즈니스 진단",
+  "디스커버리 미팅",
+  "방향 제안",
+  "범위와 로드맵",
+  "디자인 시스템 제작",
+  "검토와 런치 준비",
+  "성장 업데이트",
+];
+
+const industryKoOverrides: Record<string, IndustryKoOverride> = {
+  "med-spa-branding-design": {
+    name: "메디스파",
+    eyebrow: "뷰티와 웰니스",
+    title: "뉴욕 뉴저지 메디스파 브랜딩과 디자인",
+    description:
+      "메디스파와 에스테틱 클리닉을 위한 브랜드 아이덴티티, 웹사이트, 인쇄물, 런치 자료, 제작용 디자인 파일.",
+    audience:
+      "뉴욕/뉴저지에서 오픈, 리뉴얼, 성장을 준비하는 메디스파, 에스테틱 클리닉, 레이저 스튜디오, 웰니스 팀을 위한 페이지입니다.",
+    visualTheme: {
+      mood: "프리미엄, 차분함, 예약 전환 중심",
+      previewItems: ["예약 페이지", "서비스 메뉴", "기프트 카드", "런치 소셜"],
+    },
+    processSteps: [
+      ["문의", "오픈 또는 리뉴얼하려는 메디스파, 에스테틱 클리닉, 웰니스 서비스의 방향을 먼저 듣습니다.", "프로젝트 적합성"],
+      ["비즈니스 진단", "시술 구성, 가격대, 지역 경쟁사, 예약 동선, 신뢰 요소를 함께 점검합니다.", "메디스파 브랜드 우선순위"],
+      ["디스커버리 미팅", "대표의 비전, 이상적인 고객, 톤, 런치 일정, 서비스 메뉴 구조, 매장 내 필요한 자료를 정리합니다.", "뷰티/웰니스 크리에이티브 브리프"],
+      ["방향 제안", "브랜드 분위기 A, B, C 안을 제시하고 가장 신뢰감 있는 프리미엄 방향을 추천합니다.", "추천 메디스파 방향"],
+      ["범위와 로드맵", "아이덴티티, 웹사이트, 예약 페이지, 서비스 메뉴, 카드, 소셜 자료 중 런치에 필요한 범위를 정합니다.", "승인된 런치 범위"],
+      ["디자인 시스템 제작", "선택된 방향을 웹페이지, 서비스 메뉴, 오퍼, 카드, 캠페인 그래픽으로 확장합니다.", "예약 가능한 런치 키트"],
+      ["검토와 런치 준비", "디테일을 다듬고 모바일 예약 흐름, 인쇄 파일, 벤더 전달용 파일을 정리합니다.", "런치 준비 완료 파일"],
+      ["성장 업데이트", "오픈 후 시술 추가, 시즌 오퍼, SEO 콘텐츠, 캠페인 비주얼을 지속 업데이트합니다.", "지속적인 시술 마케팅"],
+    ].map(([title, description, output], index) => ({
+      number: String(index + 1).padStart(2, "0"),
+      title,
+      description,
+      output,
+    })),
+    services: ["브랜드 아이덴티티", "로고 디자인", "웹사이트와 랜딩 페이지", "서비스 메뉴와 브로셔", "소셜/광고 크리에이티브", "인쇄 제작 조율"],
+    deliverables: ["로고 시스템과 브랜드 컬러", "예약 중심 웹페이지", "시술 메뉴와 가격표", "기프트 카드, 리퍼럴 카드, 런치 전단", "인스타그램 템플릿과 캠페인 그래픽", "인쇄와 벤더 전달용 제작 파일"],
+    outcomes: ["첫 예약 전부터 프리미엄한 인상 형성", "웹, 인쇄물, 소셜, 매장 접점의 일관성", "벤더 전달 문제를 줄이는 빠른 런치 준비"],
+    faq: [
+      {
+        question: "메디스파 오픈 전에 전체 브랜드 시스템이 꼭 필요한가요?",
+        answer:
+          "항상 전체 시스템이 필요한 것은 아니지만, 로고, 컬러, 타입, 웹사이트 방향, 서비스 메뉴, 런치 자료가 정리되어 있으면 첫날부터 더 안정적인 인상을 줄 수 있습니다.",
+      },
+      {
+        question: "인쇄물 제작까지 같이 진행할 수 있나요?",
+        answer:
+          "가능합니다. Visual Square는 디자인 에이전시이자 인쇄 브로커로, 제작용 파일 준비와 인쇄 벤더 조율까지 도와드릴 수 있습니다.",
+      },
+    ],
+  },
+  "dental-clinic-branding-design": {
+    name: "치과",
+    eyebrow: "헬스케어 클리닉",
+    title: "뉴욕 뉴저지 치과 브랜딩과 디자인",
+    description:
+      "신규 치과, 교정치과, 전문 클리닉을 위한 신뢰 중심의 로고, 웹사이트, 환자 안내 자료, 인쇄물 시스템.",
+    audience:
+      "새로운 치과를 오픈하거나 기존 병원의 첫인상, 예약 흐름, 환자 안내 자료를 정리하려는 NY/NJ 치과 팀을 위한 페이지입니다.",
+    visualTheme: {
+      mood: "깨끗함, 전문성, 안심감",
+      previewItems: ["병원 웹사이트", "환자 패킷", "리퍼럴 카드", "오픈 안내"],
+    },
+    processSteps: createKoProcessSteps("치과", "환자 신뢰", "병원 웹사이트와 환자 안내 자료"),
+    services: ["로고와 브랜드 기본 시스템", "치과 웹사이트", "환자 안내 패킷", "리퍼럴 카드", "오픈/이전 안내물", "인쇄 제작 파일"],
+    deliverables: ["로고와 컬러/서체 기준", "예약 중심 웹사이트 구조", "환자 등록 및 안내 자료", "리퍼럴 카드와 명함", "오픈 홍보물", "벤더 전달용 인쇄 파일"],
+    outcomes: ["처음 보는 환자에게 더 신뢰감 있는 첫인상", "온라인 예약과 전화 문의를 돕는 명확한 정보 구조", "환자 안내와 리퍼럴 자료의 일관성"],
+    faq: defaultKoFaq("치과"),
+  },
+  "restaurant-cafe-branding-design": {
+    name: "레스토랑과 카페",
+    eyebrow: "푸드 앤 베버리지",
+    title: "뉴욕 뉴저지 레스토랑과 카페 브랜딩 디자인",
+    description:
+      "레스토랑, 카페, 베이커리, 디저트 숍을 위한 메뉴, 웹사이트, 패키지, 소셜, 매장 홍보물 디자인 시스템.",
+    audience:
+      "오픈 전 메뉴와 매장 분위기, 온라인 주문/예약, 테이크아웃 자료, 소셜 캠페인을 함께 준비하려는 외식 브랜드를 위한 페이지입니다.",
+    visualTheme: {
+      mood: "기억에 남고, 식욕을 돋우며, 캠페인에 바로 쓰기 좋은",
+      previewItems: ["메뉴 시스템", "테이크아웃 전단", "패키지 라벨", "소셜 오퍼"],
+    },
+    processSteps: createKoProcessSteps("레스토랑/카페", "메뉴와 매장 경험", "메뉴, 웹, 패키지, 소셜 자료"),
+    services: ["브랜드 아이덴티티", "메뉴 디자인", "웹사이트/랜딩 페이지", "테이크아웃/딜리버리 자료", "패키지 라벨", "소셜 캠페인"],
+    deliverables: ["로고와 비주얼 기준", "메뉴판과 가격표", "웹사이트 또는 오픈 랜딩 페이지", "전단, 쿠폰, 포스터", "패키지 라벨과 스티커", "인스타그램 캠페인 그래픽"],
+    outcomes: ["메뉴와 브랜드 분위기가 더 명확해짐", "오픈 전후 홍보 자료를 빠르게 준비", "매장, 온라인, 소셜의 일관된 인상"],
+    faq: defaultKoFaq("레스토랑과 카페"),
+  },
+  "real-estate-property-marketing-design": {
+    name: "부동산",
+    eyebrow: "프로퍼티 마케팅",
+    title: "부동산과 프로퍼티 마케팅 디자인",
+    description:
+      "부동산 팀과 프로퍼티 프로젝트를 위한 브로셔, 리스팅 덱, 투자자 자료, 디지털 자산 디자인.",
+    audience:
+      "매물, 개발 프로젝트, 임대 자료, 투자자 프레젠테이션을 더 전문적으로 보여줘야 하는 부동산 팀을 위한 페이지입니다.",
+    visualTheme: {
+      mood: "구조적, 프리미엄, 정보 전달 중심",
+      previewItems: ["리스팅 브로셔", "피치 덱", "프로퍼티 시트", "디지털 광고"],
+    },
+    processSteps: createKoProcessSteps("부동산", "매물과 투자자 커뮤니케이션", "브로셔, 덱, 디지털 자산"),
+    services: ["브로셔 디자인", "리스팅/투자자 덱", "프로퍼티 웹페이지", "광고 크리에이티브", "프레젠테이션 자료", "인쇄 제작 파일"],
+    deliverables: ["프로퍼티 브로셔", "리스팅 또는 투자자 덱", "원페이지 매물 시트", "웹/랜딩 페이지 구조", "디지털 광고 이미지", "인쇄용 PDF 파일"],
+    outcomes: ["복잡한 정보를 더 명확하게 전달", "고가 자산에 맞는 프리미엄 인상", "미팅과 제안에 바로 쓸 수 있는 자료"],
+    faq: defaultKoFaq("부동산"),
+  },
+  "retail-showroom-branding-design": {
+    name: "리테일과 쇼룸",
+    eyebrow: "리테일 브랜드",
+    title: "리테일과 쇼룸 브랜딩 디자인",
+    description:
+      "매장, 쇼룸, 제품 브랜드를 위한 브랜드 아이덴티티, 룩북, 라벨, 매장 POP, 캠페인 디자인.",
+    audience:
+      "작은 매장도 더 전문적으로 보이게 만들고 싶은 리테일 오너, 쇼룸, 제품 판매 브랜드를 위한 페이지입니다.",
+    visualTheme: {
+      mood: "큐레이션, 촉감, 제품 중심",
+      previewItems: ["룩북", "제품 라벨", "진열 카드", "캠페인 배너"],
+    },
+    processSteps: createKoProcessSteps("리테일/쇼룸", "제품 경험과 구매 동선", "룩북, 라벨, 매장 자료"),
+    services: ["브랜드 아이덴티티", "룩북 디자인", "제품 라벨", "매장 POP", "캠페인 그래픽", "인쇄 제작 파일"],
+    deliverables: ["로고와 브랜드 기준", "룩북과 제품 소개서", "라벨/택/스티커", "진열 카드와 매장 사인", "소셜/광고 그래픽", "제작용 파일"],
+    outcomes: ["제품이 더 정돈되고 전문적으로 보임", "매장과 온라인 판매 자료의 일관성", "시즌 캠페인을 빠르게 확장 가능"],
+    faq: defaultKoFaq("리테일과 쇼룸"),
+  },
+  "professional-services-branding-design": {
+    name: "전문 서비스",
+    eyebrow: "로컬 전문가",
+    title: "전문 서비스 브랜딩과 웹 디자인",
+    description:
+      "로펌, 회계, 컨설팅, 에이전시, 로컬 서비스 업체를 위한 신뢰 중심 브랜딩, 웹사이트, 제안 자료.",
+    audience:
+      "온라인과 제안서에서 더 전문적으로 보이고 싶은 법률, 회계, 컨설팅, 전문 서비스 비즈니스를 위한 페이지입니다.",
+    visualTheme: {
+      mood: "신뢰감, 선명함, 프레젠테이션 준비 완료",
+      previewItems: ["웹사이트", "회사 소개 덱", "원페이지 자료", "명함"],
+    },
+    processSteps: createKoProcessSteps("전문 서비스", "신뢰와 설명력", "웹사이트, 소개 자료, 세일즈 자료"),
+    services: ["브랜드 아이덴티티", "웹사이트 디자인", "회사 소개 덱", "명함과 문서류", "세일즈 자료", "소셜/광고 비주얼"],
+    deliverables: ["로고와 브랜드 기본", "웹사이트 페이지 구조와 디자인", "서비스 원페이지 자료", "피치/회사 소개 덱", "명함과 레터헤드", "LinkedIn/광고 크리에이티브"],
+    outcomes: ["상담 전부터 더 신뢰감 있는 인상", "서비스와 차별점을 더 명확하게 설명", "추천, 제안, 후속 연락에 쓸 자료의 일관성"],
+    faq: defaultKoFaq("전문 서비스"),
+  },
+};
+
+function createKoProcessSteps(
+  businessLabel: string,
+  diagnosisFocus: string,
+  productionFocus: string,
+): StudioProcessStep[] {
+  const descriptions = [
+    `어떤 ${businessLabel} 프로젝트를 오픈, 리뉴얼, 개선하려는지 먼저 듣습니다.`,
+    `업종, 고객층, 지역 경쟁 상황, ${diagnosisFocus}에서 해결해야 할 문제를 점검합니다.`,
+    "대표의 생각, 취향, 예산, 일정, 고객 접점을 1-2차 미팅에서 정리합니다.",
+    "A, B, C 방향을 제시하고 장단점을 비교한 뒤 가장 강한 방향을 추천합니다.",
+    "선택된 방향을 기준으로 브랜드, 웹, 인쇄물, 콘텐츠 범위와 진행 순서를 정합니다.",
+    `선택된 방향을 ${productionFocus}로 실제 사용할 수 있는 자산으로 제작합니다.`,
+    "결과물을 검토하고 피드백을 반영해 런치 또는 벤더 전달 준비를 마칩니다.",
+    "런치 후에도 콘텐츠, 캠페인, SEO/GEO, 시즌 업데이트를 이어갑니다.",
+  ];
+  const outputs = [
+    "프로젝트 적합성",
+    "비즈니스 우선순위",
+    "크리에이티브 브리프",
+    "추천 방향",
+    "승인된 범위",
+    "디자인 자산",
+    "런치 준비 파일",
+    "살아있는 브랜드 시스템",
+  ];
+
+  return processTitlesKo.map((title, index) => ({
+    number: String(index + 1).padStart(2, "0"),
+    title,
+    description: descriptions[index],
+    output: outputs[index],
+  }));
+}
+
+function defaultKoFaq(businessLabel: string) {
+  return [
+    {
+      question: `${businessLabel}도 브랜드 시스템이 필요한가요?`,
+      answer:
+        "규모가 크지 않아도 고객은 웹사이트, 인쇄물, 제안 자료, 소셜 콘텐츠를 통해 신뢰도를 판단합니다. 기본 시스템이 있으면 모든 접점이 더 안정적으로 보입니다.",
+    },
+    {
+      question: "단계별로 나누어 진행할 수 있나요?",
+      answer:
+        "가능합니다. 먼저 로고, 웹사이트, 핵심 인쇄물부터 시작하고 이후 캠페인, 콘텐츠, 추가 자료로 확장할 수 있습니다.",
+    },
+  ];
+}
+
+export function getLocalizedStudioProcessSteps(language: Language) {
+  if (language === "en") {
+    return studioProcessSteps;
+  }
+
+  return createKoProcessSteps(
+    "비즈니스",
+    "고객 접점과 시각적 문제",
+    "브랜드, 웹사이트, 인쇄물, 콘텐츠 자료",
+  );
+}
+
+export function getLocalizedIndustryPages(language: Language) {
+  if (language === "en") {
+    return industryPages;
+  }
+
+  return industryPages.map((industry) => getLocalizedIndustryPage(industry.slug, language) ?? industry);
+}
+
+export function getLocalizedIndustryPage(slug: string, language: Language) {
+  const industry = getIndustryPage(slug);
+
+  if (!industry || language === "en") {
+    return industry;
+  }
+
+  const override = industryKoOverrides[slug];
+
+  if (!override) {
+    return { ...industry, language };
+  }
+
+  return {
+    ...industry,
+    ...override,
+    language,
+    visualTheme: {
+      ...industry.visualTheme,
+      ...override.visualTheme,
+    },
+  };
+}
 
 export const blogPosts: BlogPost[] = [
   {
