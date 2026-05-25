@@ -32,7 +32,7 @@ type StatusBadgeProps = {
 export function StatusBadge({ status }: StatusBadgeProps) {
   return (
     <span
-      className={`inline-flex h-6 items-center border px-2 text-xs font-semibold ${toneByStatus[status]}`}
+      className={`inline-flex h-6 items-center whitespace-nowrap border px-2 text-xs font-semibold ${toneByStatus[status]}`}
     >
       {statusLabels[status]}
     </span>

@@ -207,7 +207,6 @@ window.HeroCopyRotator = {
     },
 
     transitionTo: function(index) {
-        var rotator = this;
         if (!this.title) return;
 
         if (this.isReducedMotion) {
@@ -218,9 +217,9 @@ window.HeroCopyRotator = {
         this.title.classList.add('is-changing');
 
         window.setTimeout(function() {
-            rotator.renderPhrase(index);
-            rotator.title.classList.remove('is-changing');
-        }, 360);
+            this.renderPhrase(index);
+            this.title.classList.remove('is-changing');
+        }.bind(this), 360);
     },
 
     renderPhrase: function(index) {

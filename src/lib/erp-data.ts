@@ -68,7 +68,7 @@ export async function getAuthedSupabase(pathname = "/") {
 }
 
 export async function getDashboardData() {
-  const { supabase, user } = await getAuthedSupabase("/");
+  const { supabase, user } = await getAuthedSupabase("/dashboard");
   const [
     clientsResult,
     projectsResult,

@@ -7,9 +7,10 @@ import {
 } from "./auth-routes";
 
 describe("isPublicAuthPath", () => {
-  it("treats login as public and dashboard as protected", () => {
+  it("treats login and marketing home as public while dashboard is protected", () => {
     expect(isPublicAuthPath("/login")).toBe(true);
-    expect(isPublicAuthPath("/")).toBe(false);
+    expect(isPublicAuthPath("/")).toBe(true);
+    expect(isPublicAuthPath("/dashboard")).toBe(false);
   });
 });
 
@@ -22,7 +23,7 @@ describe("getLoginRedirectPath", () => {
 
   it("falls back to dashboard for unsafe redirect targets", () => {
     expect(getLoginRedirectPath("https://evil.example")).toBe(
-      "/login?next=%2F",
+      "/login?next=%2Fdashboard",
     );
   });
 });
@@ -33,6 +34,6 @@ describe("getPostLoginRedirectPath", () => {
   });
 
   it("blocks external post-login redirects", () => {
-    expect(getPostLoginRedirectPath("https://evil.example")).toBe("/");
+    expect(getPostLoginRedirectPath("https://evil.example")).toBe("/dashboard");
   });
 });

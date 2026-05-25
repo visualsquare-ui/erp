@@ -35,18 +35,28 @@ export function JobTable({ jobs, onEdit, onDelete }: JobTableProps) {
 
   return (
     <div className="ui-card overflow-x-auto">
-      <table className="ui-table min-w-[860px]">
+      <table className="ui-table jobs-table">
+        <colgroup>
+          <col className="jobs-table-job" />
+          <col className="jobs-table-client" />
+          <col className="jobs-table-project jobs-table-optional" />
+          <col className="jobs-table-type" />
+          <col className="jobs-table-status" />
+          <col className="jobs-table-due jobs-table-optional" />
+          <col className="jobs-table-quote jobs-table-optional" />
+          {onEdit || onDelete ? <col className="jobs-table-actions" /> : null}
+        </colgroup>
         <thead>
           <tr>
             <th>Job</th>
             <th>고객</th>
-            <th>프로젝트</th>
-            <th>유형</th>
-            <th>상태</th>
-            <th>마감</th>
-            <th className="text-right">견적</th>
+            <th className="jobs-table-optional">프로젝트</th>
+            <th className="whitespace-nowrap">유형</th>
+            <th className="whitespace-nowrap">상태</th>
+            <th className="jobs-table-optional whitespace-nowrap">마감</th>
+            <th className="jobs-table-optional text-right">견적</th>
             {onEdit || onDelete ? (
-              <th className="w-28 text-right">관리</th>
+              <th className="whitespace-nowrap text-right">관리</th>
             ) : null}
           </tr>
         </thead>
@@ -61,25 +71,25 @@ export function JobTable({ jobs, onEdit, onDelete }: JobTableProps) {
                   {job.description}
                 </div>
               </td>
-              <td className="text-[var(--muted)]">
+              <td className="break-words text-[var(--muted)]">
                 {job.clients?.company_name ?? job.clients?.name ?? "-"}
               </td>
-              <td className="text-[var(--muted)]">
+              <td className="jobs-table-optional break-words text-[var(--muted)]">
                 {job.projects?.name ?? "-"}
               </td>
-              <td>{typeLabels[job.type]}</td>
-              <td>
+              <td className="whitespace-nowrap">{typeLabels[job.type]}</td>
+              <td className="whitespace-nowrap">
                 <StatusBadge status={job.status} />
               </td>
-              <td className="tabular-nums">
+              <td className="jobs-table-optional whitespace-nowrap tabular-nums">
                 {job.due_date ? formatUsDate(job.due_date) : "-"}
               </td>
-              <td className="text-right font-semibold tabular-nums">
+              <td className="jobs-table-optional whitespace-nowrap text-right font-semibold tabular-nums">
                 {formatCurrency(toNumber(job.quote_amount))}
               </td>
               {onEdit || onDelete ? (
-                <td>
-                  <div className="flex justify-end gap-1">
+                <td className="whitespace-nowrap">
+                  <div className="flex flex-nowrap justify-end gap-1">
                     {onEdit ? (
                       <ListActionButton
                         icon={

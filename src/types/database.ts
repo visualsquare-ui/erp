@@ -118,6 +118,10 @@ export type InvoiceRow = {
   total: string | number;
   paid_amount: string | number;
   paid_date: string | null;
+  stripe_checkout_session_id: string | null;
+  stripe_checkout_url: string | null;
+  stripe_payment_intent_id: string | null;
+  stripe_payment_status: string | null;
   created_at: string;
   clients?: Pick<ClientRow, "company_name" | "name" | "email" | "address"> | null;
   projects?: Pick<ProjectRow, "name"> | null;

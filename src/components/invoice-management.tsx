@@ -709,7 +709,7 @@ function InvoicePreviewModal({
   const [error, setError] = useState<string | null>(null);
   const recipient = getInvoiceRecipient(invoice);
   const lineItems = buildInvoiceLineItems(invoice);
-  const paymentLinks = getInvoicePaymentLinks();
+  const paymentLinks = getInvoicePaymentLinks({ invoiceId: invoice.id });
   const canSend = Boolean(recipient.email);
 
   async function sendInvoice() {

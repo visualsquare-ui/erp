@@ -21,7 +21,7 @@ const errorMessages: Record<string, string> = {
 
 export default async function LoginPage({ searchParams }: LoginPageProps) {
   const params = await searchParams;
-  const next = getPostLoginRedirectPath(params.next ?? "/");
+  const next = getPostLoginRedirectPath(params.next ?? null);
   const supabase = await createClient();
   const {
     data: { user },

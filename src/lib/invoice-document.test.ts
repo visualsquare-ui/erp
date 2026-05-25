@@ -20,6 +20,10 @@ const invoice = {
   total: 106.63,
   paid_amount: 0,
   paid_date: null,
+  stripe_checkout_session_id: null,
+  stripe_checkout_url: null,
+  stripe_payment_intent_id: null,
+  stripe_payment_status: null,
   created_at: "2026-05-23T00:00:00Z",
   clients: {
     company_name: "101 Chicken",
@@ -73,16 +77,15 @@ describe("invoice document helpers", () => {
     expect(html).toContain("#f57d4b");
   });
 
-  it("includes configured payment links in the email body", () => {
-    const previousStripeLink = process.env.NEXT_PUBLIC_STRIPE_PAYMENT_LINK;
-    process.env.NEXT_PUBLIC_STRIPE_PAYMENT_LINK = "https://pay.example.com";
-
-    const html = buildInvoiceEmailHtml(invoice);
+  it("includes an invoice-specific payment link in the email body", () => {
+    const html = buildInvoiceEmailHtml(invoice, {
+      paymentBaseUrl: "https://erp.visualsquare.com",
+    });
 
     expect(html).toContain("Payment options");
     expect(html).toContain("Credit Card");
-    expect(html).toContain("https://pay.example.com");
-
-    process.env.NEXT_PUBLIC_STRIPE_PAYMENT_LINK = previousStripeLink;
+    expect(html).toContain(
+      "https://erp.visualsquare.com/api/invoices/invoice-1/pay",
+    );
   });
 });

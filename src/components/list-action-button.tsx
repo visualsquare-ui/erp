@@ -19,7 +19,7 @@ export function ListActionButton({
   return (
     <button
       type="button"
-      className={`inline-flex h-7 items-center gap-1 border border-transparent px-2 text-xs font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 ${toneClass}`}
+      className={`inline-flex h-7 items-center gap-1 whitespace-nowrap border border-transparent px-2 text-xs font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 ${toneClass}`}
       onClick={onClick}
     >
       {icon}

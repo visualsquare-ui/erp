@@ -1,7 +1,7 @@
-const DEFAULT_REDIRECT = "/";
+const DEFAULT_REDIRECT = "/dashboard";
 
 export function isPublicAuthPath(pathname: string): boolean {
-  return pathname === "/login";
+  return pathname === "/" || pathname === "/login";
 }
 
 export function getLoginRedirectPath(requestedPath: string): string {

@@ -16,7 +16,7 @@ import { SignOutButton } from "@/components/sign-out-button";
 import logo from "../../assets/vs-logo-transparent.png";
 
 const navItems = [
-  { label: "대시보드", href: "/", icon: LayoutDashboard },
+  { label: "대시보드", href: "/dashboard", icon: LayoutDashboard },
   { label: "고객", href: "/clients", icon: UsersRound },
   { label: "벤더", href: "/vendors", icon: Truck },
   { label: "Jobs", href: "/jobs", icon: BriefcaseBusiness },

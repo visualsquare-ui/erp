@@ -1,14 +1,15 @@
 # Visual Square ERP Handoff
 
-Last updated: 2026-05-23
+Last updated: 2026-05-25
 
 ## Workspace
 
 - Project path: `/Users/jaeminkoo/Workspace/visualsquare`
-- App: Next.js 16 / React 19 / Supabase / Resend / PDFKit
+- App: Next.js 16 / React 19 / Supabase / Resend / PDFKit / Stripe
 - Local URL: `http://localhost:3000`
 - Current branch: `main`
-- Working tree at handoff time: clean
+- GitHub remote: `visualsquare-ui/visualsquare-site`
+- Working tree at handoff time: clean after the latest handoff commit/push
 
 ## Commands
 
@@ -33,20 +34,39 @@ RESEND_API_KEY=
 RESEND_FROM_EMAIL=
 RESEND_REPLY_TO_EMAIL=
 
+STRIPE_SECRET_KEY=
+STRIPE_WEBHOOK_SECRET=
+SUPABASE_SERVICE_ROLE_KEY=
+NEXT_PUBLIC_APP_URL=
 NEXT_PUBLIC_STRIPE_PAYMENT_LINK=
 NEXT_PUBLIC_ZELLE_PAYMENT_LINK=
 NEXT_PUBLIC_VENMO_PAYMENT_LINK=
 ```
 
-Current payment link implementation is static link based. The better next step is Stripe Checkout Sessions per invoice plus webhook-based Paid updates.
+Stripe Checkout Sessions are implemented per invoice. `NEXT_PUBLIC_STRIPE_PAYMENT_LINK` remains only as a fallback when no invoice id is available. Set the Stripe webhook endpoint to:
+
+```text
+https://<erp-domain>/api/stripe/webhook
+```
+
+Listen for:
+
+```text
+checkout.session.completed
+checkout.session.async_payment_succeeded
+```
+
+The webhook marks matching invoices as `paid` using `client_reference_id` / `metadata.invoice_id`.
 
 ## Recent Verification
 
-Most recent full checks passed:
+Most recent checks passed on 2026-05-25:
 
-- `npm test`: 14 test files / 38 tests passed
+- `npm test`: 18 test files / 54 tests passed
 - `npm run lint`: passed
 - `npm run build`: passed
+- `npm exec eslint src/app/industries/page.tsx`: passed after shortening the Industries hero title
+- `npm test -- src/content/marketing-content.test.ts`: passed after Korean content coverage updates
 
 ## Supabase Migrations
 
@@ -58,6 +78,7 @@ Migration files in `supabase/migrations`:
 - `202605230002_jobs_first_schema.sql`
 - `202605230003_invoice_po_links.sql`
 - `202605230004_optional_invoice_project.sql`
+- `202605240001_stripe_invoice_payments.sql`
 
 Important SQL that was recently needed:
 
@@ -207,9 +228,54 @@ Invoice numbering:
   - `logo.png`
   - `logo-white.png`
 - Landing page typography issue with descenders clipped in “System” / “Beautifully” was fixed.
+- The `/` route now renders the legacy public home markup from `index.html` through Next so the previous high-quality home design stays intact.
+- Home still loads `/home/style.css` and `/home/script.js`; keep future home refinements aligned with those files unless the whole home page is deliberately rebuilt.
+- The black loader screen was removed/disabled so the site opens directly into the home experience.
+- Home header regains the white background once the user scrolls, so menu text remains readable over portfolio imagery.
 - Recommended production subdomains:
   - Internal ERP: `erp.visualsquare.com`
   - Future client portal: `clients.visualsquare.com`
+
+### Public Marketing Pages
+
+- Added Next routes for public marketing content:
+  - `/industries`
+  - `/industries/[slug]`
+  - `/blog`
+  - `/blog/[slug]`
+- Added shared marketing shell/header/footer:
+  - `src/components/marketing-shell.tsx`
+  - `src/components/marketing-language-toggle.tsx`
+  - `src/components/marketing-visuals.tsx`
+- Header was unified across home, industries, blog, and article pages:
+  - Logo links to `/`
+  - Menu order: `Services`, `Portfolio`, `About`, divider, `Industries`, `Blog`, `Get in Touch`, language toggle
+  - `Services`, `Portfolio`, and `About` are home-page anchors
+  - `Industries` and `Blog` are separate pages
+- Marketing typography was aligned with the home screen font set:
+  - Display headings use the same serif display direction as home
+  - Navigation/body UI use the same sans direction as home
+  - Avoid adding extra font families unless the whole identity system changes
+- Language toggle now translates marketing page content, not only the navigation:
+  - Korean copy exists for industry cards, industry detail pages, process steps, footer, and blog/article content
+  - Coverage test: `src/content/marketing-content.test.ts`
+- Blog was simplified from a lecture-style page into a clearer article index:
+  - Hero title shortened to `Design notes, not lectures.`
+  - Latest article card is visually identifiable as the blog entry
+  - Article page title shortened to `Med Spa Launch Checklist`
+  - FAQ was removed from the article layout
+  - A relevant generated hero image was added at the top of the article
+  - Footer includes Visual Square logo
+- Industries hero title was shortened:
+  - English: `Launch-ready design systems.`
+  - Korean: `런칭 준비 디자인 시스템.`
+- Marketing images live under `public/marketing`.
+
+### Public Content Data
+
+- Main content source: `src/content/marketing-content.ts`
+- Blog and industry routes should read from this shared data instead of duplicating page copy.
+- Korean fields are stored alongside English fields; when adding content, add both languages and update the coverage test.
 
 ## Recent Commits
 

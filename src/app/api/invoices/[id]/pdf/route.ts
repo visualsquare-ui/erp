@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
 
+import { getAppBaseUrl } from "@/lib/app-url";
 import { buildInvoicePdf } from "@/lib/invoice-pdf";
 import { getInvoiceDocument } from "@/lib/invoice-server";
 
 export const runtime = "nodejs";
 
 export async function GET(
-  _request: Request,
+  request: Request,
   context: { params: Promise<{ id: string }> },
 ) {
   try {
@@ -20,7 +21,9 @@ export async function GET(
       );
     }
 
-    const pdf = await buildInvoicePdf(invoice);
+    const pdf = await buildInvoicePdf(invoice, {
+      paymentBaseUrl: getAppBaseUrl(request),
+    });
 
     return new NextResponse(new Uint8Array(pdf), {
       headers: {

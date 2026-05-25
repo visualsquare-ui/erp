@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { getAppBaseUrl } from "@/lib/app-url";
 import { createClient } from "@/lib/supabase/server";
 import {
   buildInvoiceEmailHtml,
@@ -12,7 +13,7 @@ import { getInvoiceDocument } from "@/lib/invoice-server";
 export const runtime = "nodejs";
 
 export async function POST(
-  _request: Request,
+  request: Request,
   context: { params: Promise<{ id: string }> },
 ) {
   const { id } = await context.params;
@@ -47,7 +48,8 @@ export async function POST(
     );
   }
 
-  const pdf = await buildInvoicePdf(invoice);
+  const paymentBaseUrl = getAppBaseUrl(request);
+  const pdf = await buildInvoicePdf(invoice, { paymentBaseUrl });
   const response = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: {
@@ -59,8 +61,8 @@ export async function POST(
       to: [recipient.email],
       reply_to: process.env.RESEND_REPLY_TO_EMAIL || undefined,
       subject: `Invoice ${invoice.invoice_number} from Visual Square`,
-      html: buildInvoiceEmailHtml(invoice),
-      text: buildInvoiceEmailText(invoice),
+      html: buildInvoiceEmailHtml(invoice, { paymentBaseUrl }),
+      text: buildInvoiceEmailText(invoice, { paymentBaseUrl }),
       attachments: [
         {
           filename: `${invoice.invoice_number}.pdf`,

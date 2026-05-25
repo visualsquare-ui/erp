@@ -47,14 +47,24 @@ function escapeHtml(value: string) {
     .replace(/"/g, "&quot;");
 }
 
-export function buildInvoiceEmailHtml(invoice: InvoiceDocument) {
+type InvoiceRenderOptions = {
+  paymentBaseUrl?: string;
+};
+
+export function buildInvoiceEmailHtml(
+  invoice: InvoiceDocument,
+  options: InvoiceRenderOptions = {},
+) {
   const recipient = getInvoiceRecipient(invoice);
   const invoiceNumber = escapeHtml(invoice.invoice_number);
   const clientName = escapeHtml(recipient.name);
   const projectName = escapeHtml(invoice.projects?.name ?? "Project");
   const total = formatCurrency(toNumber(invoice.total));
   const dueDate = formatUsDate(invoice.due_date);
-  const paymentLinks = getInvoicePaymentLinks();
+  const paymentLinks = getInvoicePaymentLinks({
+    invoiceId: invoice.id,
+    baseUrl: options.paymentBaseUrl,
+  });
   const paymentHtml =
     paymentLinks.length > 0
       ? `<div style="margin:0 0 24px;">
@@ -105,9 +115,15 @@ export function buildInvoiceEmailHtml(invoice: InvoiceDocument) {
 </html>`;
 }
 
-export function buildInvoiceEmailText(invoice: InvoiceDocument) {
+export function buildInvoiceEmailText(
+  invoice: InvoiceDocument,
+  options: InvoiceRenderOptions = {},
+) {
   const recipient = getInvoiceRecipient(invoice);
-  const paymentLinks = getInvoicePaymentLinks();
+  const paymentLinks = getInvoicePaymentLinks({
+    invoiceId: invoice.id,
+    baseUrl: options.paymentBaseUrl,
+  });
 
   return [
     `Hello ${recipient.name},`,

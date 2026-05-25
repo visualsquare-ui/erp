@@ -16,6 +16,10 @@ const invoice = {
   total: 106.63,
   paid_amount: 0,
   paid_date: null,
+  stripe_checkout_session_id: null,
+  stripe_checkout_url: null,
+  stripe_payment_intent_id: null,
+  stripe_payment_status: null,
   created_at: "2026-05-23T00:00:00Z",
   clients: {
     company_name: "101 Chicken",

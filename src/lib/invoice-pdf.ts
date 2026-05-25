@@ -11,7 +11,14 @@ import {
 } from "./invoice-document";
 import { getInvoicePaymentLinks } from "./payment-links";
 
-export async function buildInvoicePdf(invoice: InvoiceDocument) {
+type InvoicePdfOptions = {
+  paymentBaseUrl?: string;
+};
+
+export async function buildInvoicePdf(
+  invoice: InvoiceDocument,
+  options: InvoicePdfOptions = {},
+) {
   return new Promise<Buffer>((resolve, reject) => {
     const chunks: Buffer[] = [];
     const doc = new PDFDocument({
@@ -25,7 +32,10 @@ export async function buildInvoicePdf(invoice: InvoiceDocument) {
     });
     const recipient = getInvoiceRecipient(invoice);
     const lines = buildInvoiceLineItems(invoice);
-    const paymentLinks = getInvoicePaymentLinks();
+    const paymentLinks = getInvoicePaymentLinks({
+      invoiceId: invoice.id,
+      baseUrl: options.paymentBaseUrl,
+    });
     const logoPath = path.join(process.cwd(), "assets", "vs-logo-transparent.png");
     const logoImage = fs.readFileSync(logoPath);
     const fontPath = path.join(

@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 
 import type { InvoiceDocument } from "./invoice-document";
 
@@ -13,6 +14,26 @@ export async function getInvoiceDocument(
   if (!user) {
     return null;
   }
+
+  const { data, error } = await supabase
+    .from("invoices")
+    .select(
+      "*, clients(company_name, name, email, address), projects(name), invoice_items(*)",
+    )
+    .eq("id", id)
+    .single();
+
+  if (error || !data) {
+    return null;
+  }
+
+  return data as InvoiceDocument;
+}
+
+export async function getInvoiceDocumentWithService(
+  id: string,
+): Promise<InvoiceDocument | null> {
+  const supabase = createServiceClient();
 
   const { data, error } = await supabase
     .from("invoices")
