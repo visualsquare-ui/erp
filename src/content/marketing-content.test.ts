@@ -11,7 +11,7 @@ import {
   studioProcessSteps,
   weeklyBlogPlan,
 } from "./marketing-content";
-import { marketingNavItems } from "../components/marketing-shell";
+import { marketingNavItems } from "../components/marketing/shell";
 
 describe("marketing content", () => {
   it("publishes scheduled blog posts only after their publish date", () => {
