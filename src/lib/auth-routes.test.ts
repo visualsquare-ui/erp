@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  getErpRootRedirectPath,
   getLoginRedirectPath,
   getPostLoginRedirectPath,
   isPublicAuthPath,
@@ -35,5 +36,18 @@ describe("getPostLoginRedirectPath", () => {
 
   it("blocks external post-login redirects", () => {
     expect(getPostLoginRedirectPath("https://evil.example")).toBe("/dashboard");
+  });
+});
+
+describe("getErpRootRedirectPath", () => {
+  it("sends the ERP domain root to the ERP dashboard", () => {
+    expect(getErpRootRedirectPath("/", "erp.visualsquare.com")).toBe(
+      "/dashboard",
+    );
+  });
+
+  it("leaves non-root ERP paths and marketing domains alone", () => {
+    expect(getErpRootRedirectPath("/login", "erp.visualsquare.com")).toBeNull();
+    expect(getErpRootRedirectPath("/", "visualsquare.com")).toBeNull();
   });
 });

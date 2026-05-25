@@ -3,7 +3,11 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import type { Metadata } from "next";
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
 import Script from "next/script";
+
+import { getErpRootRedirectPath } from "@/lib/auth-routes";
 
 export const metadata: Metadata = {
   title: "Visual Square | Design & Printing Studio",
@@ -22,7 +26,17 @@ function getHomeMarkup() {
     .replaceAll('src="logo-white.png"', 'src="/logo-white.png"');
 }
 
-export default function HomePage() {
+export default async function HomePage() {
+  const requestHeaders = await headers();
+  const redirectPath = getErpRootRedirectPath(
+    "/",
+    requestHeaders.get("host"),
+  );
+
+  if (redirectPath) {
+    redirect(redirectPath);
+  }
+
   return (
     <>
       <link rel="stylesheet" href="/home/style.css?v=7" />

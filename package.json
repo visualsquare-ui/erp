@@ -6,6 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "lint": "eslint .",
+    "preflight": "node scripts/preflight.mjs",
     "sql:check": "node scripts/validate-sql.mjs supabase/migrations/*.sql",
     "test": "vitest run"
   },
