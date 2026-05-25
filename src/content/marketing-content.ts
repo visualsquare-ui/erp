@@ -1092,7 +1092,7 @@ export const blogPosts: BlogPost[] = [
     description:
       "What to prepare before opening: identity, website, service menu, print, and launch assets.",
     language: "en",
-    publishDate: "2026-05-25T09:30:00-04:00",
+    publishDate: "2026-05-22T09:30:00-04:00",
     category: "Brand Launch",
     industrySlug: "med-spa-branding-design",
     readingMinutes: 7,
