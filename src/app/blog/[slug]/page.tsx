@@ -155,22 +155,6 @@ export default async function BlogPostPage({ params }: PageProps) {
             {post.summary}
           </p>
 
-          {post.keyPoints.length > 0 ? (
-            <ul className="mt-8 grid gap-3">
-              {post.keyPoints.map((point, index) => (
-                <li
-                  key={point}
-                  className="flex gap-3 border border-[var(--border)] bg-[var(--surface)] p-4 text-base leading-7"
-                  data-en={point}
-                  data-ko={koPost?.keyPoints[index] ?? point}
-                >
-                  <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-[var(--coral)]" aria-hidden="true" />
-                  {point}
-                </li>
-              ))}
-            </ul>
-          ) : null}
-
           <div className="mt-12 space-y-12">
             {post.sections.map((section, sectionIndex) => {
               const koSection = koPost?.sections[sectionIndex];
@@ -214,29 +198,6 @@ export default async function BlogPostPage({ params }: PageProps) {
             })}
           </div>
 
-          {post.faq.length > 0 ? (
-            <section className="mt-16 border-t border-[var(--border)] pt-12">
-              <h2
-                className="text-3xl font-semibold"
-                data-en="Frequently asked questions"
-                data-ko="자주 묻는 질문"
-              >
-                Frequently asked questions
-              </h2>
-              <dl className="mt-8 space-y-6">
-                {post.faq.map((item) => (
-                  <div key={item.question} className="border border-[var(--border)] bg-[var(--surface)] p-6">
-                    <dt className="text-base font-semibold leading-7">
-                      {item.question}
-                    </dt>
-                    <dd className="mt-3 text-base leading-7 text-[var(--muted)]">
-                      {item.answer}
-                    </dd>
-                  </div>
-                ))}
-              </dl>
-            </section>
-          ) : null}
         </div>
       </article>
     </MarketingShell>
