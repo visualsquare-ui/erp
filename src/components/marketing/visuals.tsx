@@ -59,134 +59,6 @@ export function StudioHeroVisual() {
   );
 }
 
-function getEditorialVariant(slug: string) {
-  const total = slug.split("").reduce((sum, char) => sum + char.charCodeAt(0), 0);
-  return total % 4;
-}
-
-export function EditorialPreviewVisual({
-  post,
-  mode = "card",
-}: {
-  post: BlogPost;
-  mode?: "card" | "hero";
-}) {
-  const industry = industryPages.find((item) => item.slug === post.industrySlug);
-  const palette = industry?.visualTheme.palette ?? ["#F4E7DE", "#2B2B2B", "#FFFFFF"];
-  const previewItems = industry?.visualTheme.previewItems ?? [
-    "Brand system",
-    "Website",
-    "Print files",
-    "Campaign assets",
-  ];
-  const translatedPost = post.ko;
-  const variant = getEditorialVariant(post.slug);
-  const isHero = mode === "hero";
-  const canvasClassName = isHero
-    ? "relative aspect-[16/9] w-full overflow-hidden"
-    : "relative aspect-[16/10] w-full overflow-hidden";
-  const titleClassName = isHero ? "text-3xl sm:text-5xl" : "text-2xl";
-  const secondaryTitleClassName = isHero ? "text-lg sm:text-2xl" : "text-base";
-
-  return (
-    <div
-      className={canvasClassName}
-      style={{
-        background:
-          variant === 0
-            ? `linear-gradient(135deg, ${palette[0]} 0%, ${palette[2]} 42%, ${palette[1]} 160%)`
-            : variant === 1
-              ? `radial-gradient(circle at 20% 15%, ${palette[2]} 0%, ${palette[0]} 28%, ${palette[1]} 145%)`
-              : variant === 2
-                ? `linear-gradient(155deg, ${palette[1]} 0%, ${palette[0]} 65%, ${palette[2]} 100%)`
-                : `linear-gradient(145deg, ${palette[2]} 5%, ${palette[0]} 48%, ${palette[1]} 140%)`,
-      }}
-    >
-      <div className="absolute inset-0 opacity-20">
-        <div className="absolute -left-10 top-8 h-40 w-40 rounded-full border border-white/50" />
-        <div className="absolute right-10 top-10 h-24 w-24 rotate-12 border border-white/50" />
-        <div className="absolute bottom-8 left-1/3 h-32 w-32 rounded-full bg-white/20 blur-2xl" />
-      </div>
-
-      <div className="absolute inset-0 grid gap-4 p-4 sm:p-6">
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex flex-wrap gap-2">
-            <span className="border border-white/60 bg-white/85 px-3 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.12em] text-[var(--foreground)] backdrop-blur">
-              {post.category}
-            </span>
-            <span className="border border-white/40 bg-black/50 px-3 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.12em] text-white">
-              {post.readingMinutes} min
-            </span>
-          </div>
-          <div className="flex gap-1.5">
-            {palette.map((color) => (
-              <span
-                key={color}
-                className="h-5 w-5 border border-white/70"
-                style={{ backgroundColor: color }}
-              />
-            ))}
-          </div>
-        </div>
-
-        <div className="grid flex-1 gap-4 md:grid-cols-[1.15fr_0.85fr]">
-          <div className="flex flex-col justify-end">
-            <div className="max-w-3xl border border-white/60 bg-white/88 p-4 shadow-[0_18px_50px_rgba(0,0,0,0.12)] backdrop-blur sm:p-5">
-              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--coral-strong)]">
-                Visual Square Journal
-              </p>
-              <h3
-                className={`mt-3 font-semibold leading-[1.02] tracking-normal text-[var(--foreground)] ${titleClassName}`}
-              >
-                {post.title}
-              </h3>
-              <p
-                className={`mt-3 max-w-2xl font-medium leading-7 text-[var(--muted)] ${secondaryTitleClassName}`}
-              >
-                {translatedPost?.summary ?? post.summary}
-              </p>
-            </div>
-          </div>
-
-          <div className="flex flex-col justify-between gap-4">
-            <div
-              className={`border border-white/50 bg-black/65 text-white shadow-[0_20px_50px_rgba(0,0,0,0.18)] backdrop-blur ${
-                variant === 1 ? "rotate-[-2deg]" : variant === 2 ? "rotate-[1.5deg]" : ""
-              } p-4`}
-            >
-              <p className="text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-white/70">
-                Article focus
-              </p>
-              <div className="mt-3 grid gap-2">
-                {post.keyPoints.slice(0, 3).map((point) => (
-                  <p key={point} className="text-sm leading-6 text-white/92">
-                    {point}
-                  </p>
-                ))}
-              </div>
-            </div>
-
-            <div className="flex flex-wrap gap-2">
-              {previewItems.map((item) => (
-                <span
-                  key={item}
-                  className={`border px-3 py-2 text-xs font-semibold uppercase tracking-[0.1em] ${
-                    variant === 2
-                      ? "border-black/10 bg-white/90 text-[var(--foreground)]"
-                      : "border-white/55 bg-white/78 text-[var(--foreground)]"
-                  }`}
-                >
-                  {item}
-                </span>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 export function IndustryPreview({
   industry,
   compact = false,
@@ -291,6 +163,11 @@ export function IndustryCard({ industry }: { industry: IndustryPage }) {
 }
 
 export function EditorialCard({ post }: { post: BlogPost }) {
+  const industry = industryPages.find((item) => item.slug === post.industrySlug);
+  const imageSrc = industry?.visualTheme.imageSrc ?? "/marketing/brand-launch-kit.png";
+  const imageAlt = industry
+    ? `${industry.name} branding, website, and print article preview`
+    : "Brand launch kit article preview";
   const translatedPost = post.ko;
 
   return (
@@ -298,9 +175,13 @@ export function EditorialCard({ post }: { post: BlogPost }) {
       href={`/blog/${post.slug}`}
       className="group grid overflow-hidden border border-[var(--border)] bg-white transition-colors hover:border-[var(--coral)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--coral)]"
     >
-      <div className="transition-transform duration-500 group-hover:scale-[1.02]">
-        <EditorialPreviewVisual post={post} />
-      </div>
+      <Image
+        src={imageSrc}
+        alt={imageAlt}
+        width={1586}
+        height={992}
+        className="aspect-[16/10] w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+      />
       <div className="border-t border-[var(--border)] p-5">
         <p
           className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--muted)]"

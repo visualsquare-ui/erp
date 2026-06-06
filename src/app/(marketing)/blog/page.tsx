@@ -1,14 +1,13 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 
 import { MarketingShell } from "@/components/marketing/shell";
-import {
-  EditorialCard,
-  EditorialPreviewVisual,
-} from "@/components/marketing/visuals";
+import { EditorialCard } from "@/components/marketing/visuals";
 import {
   getBlogVisibilityDate,
   getPublishedBlogPosts,
+  industryPages,
 } from "@/content/marketing-content";
 
 export const dynamic = "force-dynamic";
@@ -23,6 +22,11 @@ export default function BlogPage() {
   const blogNow = getBlogVisibilityDate();
   const publishedPosts = getPublishedBlogPosts(blogNow);
   const featuredPost = publishedPosts[0];
+  const featuredIndustry = featuredPost
+    ? industryPages.find((industry) => industry.slug === featuredPost.industrySlug)
+    : null;
+  const featuredImageSrc =
+    featuredIndustry?.visualTheme.imageSrc ?? "/marketing/brand-launch-kit.png";
 
   return (
     <MarketingShell>
@@ -80,12 +84,15 @@ export default function BlogPage() {
             </div>
           </div>
           <figure className="relative overflow-hidden border border-[var(--border)] bg-[var(--surface)]">
-            {featuredPost ? (
-              <EditorialPreviewVisual post={featuredPost} mode="hero" />
-            ) : (
-              <div className="aspect-[16/10] bg-[var(--surface)]" />
-            )}
-            <figcaption className="absolute inset-x-4 bottom-4 z-10 border border-white/60 bg-white/90 p-4 backdrop-blur">
+            <Image
+              src={featuredImageSrc}
+              alt="Visual Square article preview with brand, website, print, and launch materials"
+              width={1586}
+              height={992}
+              priority
+              className="aspect-[16/10] h-full w-full object-cover"
+            />
+            <figcaption className="absolute inset-x-4 bottom-4 border border-white/60 bg-white/90 p-4 backdrop-blur">
               <p
                 className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--coral-strong)]"
                 data-en="Editorial focus"
