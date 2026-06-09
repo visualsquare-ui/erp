@@ -6,7 +6,7 @@ import { getInvoicesPageData } from "@/lib/erp-data";
 export const dynamic = "force-dynamic";
 
 export default async function InvoicesPage() {
-  const { user, clients, projects, purchaseOrders, invoices } =
+  const { user, clients, projects, purchaseOrders, invoices, accounts } =
     await getInvoicesPageData();
 
   return (
@@ -22,6 +22,7 @@ export default async function InvoicesPage() {
         projects={projects}
         purchaseOrders={purchaseOrders}
         invoices={invoices}
+        accounts={accounts}
       />
     </AppShell>
   );

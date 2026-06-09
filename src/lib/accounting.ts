@@ -186,6 +186,75 @@ export function buildVendorBillSyncUpdate(
     : { status: "received", paid_date: null };
 }
 
+type CategorizedTransaction = {
+  type: AccountTransactionType;
+  amount: number | string;
+  txn_date?: string;
+  category?: string | null;
+};
+
+export type ProfitAndLossLine = {
+  category: string;
+  total: number;
+};
+
+export type ProfitAndLossReport = {
+  income: ProfitAndLossLine[];
+  expense: ProfitAndLossLine[];
+  incomeTotal: number;
+  expenseTotal: number;
+  net: number;
+};
+
+export const UNCATEGORIZED_LABEL = "미분류";
+
+// Cash-basis P&L: groups the month's ledger transactions by category.
+export function buildProfitAndLoss(
+  transactions: CategorizedTransaction[],
+  monthIso: string,
+): ProfitAndLossReport {
+  const monthly = transactions.filter((transaction) =>
+    (transaction.txn_date ?? "").startsWith(monthIso),
+  );
+
+  function collectLines(direction: TransactionDirection): ProfitAndLossLine[] {
+    const totals = new Map<string, number>();
+
+    for (const transaction of monthly) {
+      if (getTransactionDirection(transaction.type) !== direction) {
+        continue;
+      }
+
+      const category = transaction.category?.trim() || UNCATEGORIZED_LABEL;
+      totals.set(
+        category,
+        (totals.get(category) ?? 0) + toNumber(transaction.amount),
+      );
+    }
+
+    return [...totals.entries()]
+      .map(([category, total]) => ({ category, total: roundMoney(total) }))
+      .sort((a, b) => b.total - a.total);
+  }
+
+  const income = collectLines("in");
+  const expense = collectLines("out");
+  const incomeTotal = roundMoney(
+    income.reduce((sum, line) => sum + line.total, 0),
+  );
+  const expenseTotal = roundMoney(
+    expense.reduce((sum, line) => sum + line.total, 0),
+  );
+
+  return {
+    income,
+    expense,
+    incomeTotal,
+    expenseTotal,
+    net: roundMoney(incomeTotal - expenseTotal),
+  };
+}
+
 export function summarizeTransactions(
   transactions: TransactionInput[],
   monthIso: string,

@@ -2,14 +2,25 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { ExternalLink, Eye, FileSearch, Pencil, Send, Trash2, X } from "lucide-react";
+import {
+  Banknote,
+  ExternalLink,
+  Eye,
+  FileSearch,
+  Pencil,
+  Send,
+  Trash2,
+  X,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 
 import {
   createInvoiceAction,
+  createTransactionAction,
   deleteInvoiceAction,
   updateInvoiceAction,
 } from "@/app/(erp)/actions";
+import { paymentMethods } from "@/lib/accounting";
 import { EmptyState } from "@/components/erp/empty-state";
 import { ListActionButton } from "@/components/erp/list-action-button";
 import { StatusBadge } from "@/components/erp/status-badge";
@@ -25,6 +36,7 @@ import {
 import { getInvoicePaymentLinks } from "@/lib/payment-links";
 import { NJ_SALES_TAX_RATE_INPUT } from "@/lib/sales-tax";
 import type {
+  BankAccountRow,
   ClientRow,
   InvoiceItemRow,
   InvoiceRow,
@@ -43,6 +55,7 @@ type InvoiceManagementProps = {
   projects: ProjectRow[];
   purchaseOrders: PurchaseOrderRow[];
   invoices: InvoiceWithItems[];
+  accounts: BankAccountRow[];
 };
 
 type InvoiceFormItem = {
@@ -100,6 +113,7 @@ export function InvoiceManagement({
   projects,
   purchaseOrders,
   invoices,
+  accounts,
 }: InvoiceManagementProps) {
   const router = useRouter();
   const [formMode, setFormMode] = useState<"closed" | "create" | "edit">(
@@ -108,6 +122,8 @@ export function InvoiceManagement({
   const [editingInvoice, setEditingInvoice] =
     useState<InvoiceWithItems | null>(null);
   const [previewInvoice, setPreviewInvoice] =
+    useState<InvoiceWithItems | null>(null);
+  const [recordingInvoice, setRecordingInvoice] =
     useState<InvoiceWithItems | null>(null);
 
   function closeForm() {
@@ -168,6 +184,16 @@ export function InvoiceManagement({
         />
       ) : null}
 
+      {recordingInvoice ? (
+        <RecordPaymentForm
+          key={recordingInvoice.id}
+          invoice={recordingInvoice}
+          accounts={accounts}
+          onCancel={() => setRecordingInvoice(null)}
+          onSaved={() => setRecordingInvoice(null)}
+        />
+      ) : null}
+
       <div className="ui-card overflow-hidden">
         {invoices.length === 0 ? (
           <EmptyState
@@ -185,6 +211,11 @@ export function InvoiceManagement({
               }}
               onView={() => setPreviewInvoice(invoice)}
               onDelete={() => void deleteInvoice(invoice)}
+              onRecordPayment={
+                invoice.status !== "paid" && accounts.length > 0
+                  ? () => setRecordingInvoice(invoice)
+                  : undefined
+              }
             />
           ))
         )}
@@ -633,11 +664,13 @@ function InvoiceRowCard({
   onView,
   onEdit,
   onDelete,
+  onRecordPayment,
 }: {
   invoice: InvoiceWithItems;
   onView: () => void;
   onEdit: () => void;
   onDelete: () => void;
+  onRecordPayment?: () => void;
 }) {
   return (
     <article className="grid gap-4 border-b border-[var(--border)] p-5 last:border-b-0 md:grid-cols-[minmax(0,1fr)_13rem]">
@@ -671,6 +704,14 @@ function InvoiceRowCard({
           </p>
         </div>
         <div className="flex justify-end gap-1 border-t border-[var(--border)] pt-2 md:w-full">
+          {onRecordPayment ? (
+            <ListActionButton
+              icon={<Banknote className="h-3.5 w-3.5" aria-hidden="true" />}
+              onClick={onRecordPayment}
+            >
+              입금
+            </ListActionButton>
+          ) : null}
           <ListActionButton
             icon={<Eye className="h-3.5 w-3.5" aria-hidden="true" />}
             onClick={onView}
@@ -693,6 +734,119 @@ function InvoiceRowCard({
         </div>
       </div>
     </article>
+  );
+}
+
+function RecordPaymentForm({
+  invoice,
+  accounts,
+  onCancel,
+  onSaved,
+}: {
+  invoice: InvoiceWithItems;
+  accounts: BankAccountRow[];
+  onCancel: () => void;
+  onSaved: () => void;
+}) {
+  const remaining = Math.max(
+    toNumber(invoice.total) - toNumber(invoice.paid_amount),
+    0,
+  );
+  const clientName =
+    invoice.clients?.company_name ?? invoice.clients?.name ?? "";
+
+  async function submit(formData: FormData) {
+    await createTransactionAction(formData);
+    onSaved();
+  }
+
+  return (
+    <form action={submit} className="ui-panel space-y-4">
+      <div className="flex items-center justify-between gap-3">
+        <h2 className="text-sm font-semibold">
+          입금 기록 · {invoice.invoice_number}
+        </h2>
+        <button
+          type="button"
+          className="text-sm font-semibold text-[var(--muted)] hover:text-[var(--foreground)]"
+          onClick={onCancel}
+        >
+          닫기
+        </button>
+      </div>
+
+      <input type="hidden" name="type" value="client_payment" />
+      <input type="hidden" name="invoice_id" value={invoice.id} />
+      <input type="hidden" name="client_id" value={invoice.client_id} />
+      <input type="hidden" name="payee" value={clientName} />
+      <input
+        type="hidden"
+        name="description"
+        value={`Invoice ${invoice.invoice_number} payment`}
+      />
+      <div className="grid gap-3 md:grid-cols-4">
+        <Field label="Date">
+          <input
+            className="ui-input"
+            name="txn_date"
+            type="date"
+            required
+            defaultValue={new Date().toISOString().slice(0, 10)}
+          />
+        </Field>
+        <Field label="Account">
+          <select
+            className="ui-input"
+            name="bank_account_id"
+            required
+            defaultValue={accounts[0]?.id ?? ""}
+          >
+            {accounts.map((account) => (
+              <option key={account.id} value={account.id}>
+                {account.institution ? `${account.institution} ` : ""}
+                {account.name}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <Field label="Amount">
+          <input
+            className="ui-input"
+            name="amount"
+            type="number"
+            step="0.01"
+            min="0.01"
+            required
+            inputMode="decimal"
+            defaultValue={remaining > 0 ? String(remaining) : ""}
+          />
+        </Field>
+        <Field label="Payment Method">
+          <select className="ui-input" name="payment_method" defaultValue="">
+            <option value="">선택 안 함</option>
+            {paymentMethods.map((method) => (
+              <option key={method.value} value={method.value}>
+                {method.label}
+              </option>
+            ))}
+          </select>
+        </Field>
+      </div>
+      <p className="text-xs text-[var(--muted)]">
+        저장하면 어카운팅 장부에 기록되고 인보이스 입금액과 상태가 자동
+        반영됩니다. 미수금 잔액 {formatCurrency(remaining)}.
+      </p>
+      <div className="grid gap-2 sm:grid-cols-2">
+        <button
+          type="button"
+          className="ui-button ui-button-secondary"
+          onClick={onCancel}
+        >
+          취소
+        </button>
+        <button className="ui-button">입금 저장</button>
+      </div>
+    </form>
   );
 }
 

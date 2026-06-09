@@ -2,13 +2,20 @@ import Link from "next/link";
 import { AlertCircle, ArrowUpRight, Clock3 } from "lucide-react";
 
 import {
+  calculateAccountBalance,
+  summarizeTransactions,
+} from "@/lib/accounting";
+import {
   calculateOutstandingAp,
   calculateOutstandingAr,
+  roundMoney,
   toNumber,
 } from "@/lib/erp-calculations";
 import { formatCurrency, formatUsDate } from "@/lib/format";
 import type {
+  AccountTransactionRow,
   AssetRow,
+  BankAccountRow,
   ClientRow,
   InvoiceRow,
   JobRow,
@@ -31,6 +38,8 @@ type DashboardProps = {
     invoices: InvoiceRow[];
     bills: VendorBillRow[];
     assets: AssetRow[];
+    accounts: BankAccountRow[];
+    transactions: AccountTransactionRow[];
   };
 };
 
@@ -55,9 +64,19 @@ export function Dashboard({ data }: DashboardProps) {
       status: bill.status,
     })),
   );
+  const currentMonthIso = new Date().toISOString().slice(0, 7);
+  const [currentYear, currentMonth] = currentMonthIso.split("-");
   const monthlyRevenue = data.invoices
-    .filter((invoice) => invoice.issue_date.startsWith("2026-05"))
+    .filter((invoice) => invoice.issue_date.startsWith(currentMonthIso))
     .reduce((sum, invoice) => sum + toNumber(invoice.total), 0);
+  const totalBalance = roundMoney(
+    data.accounts.reduce(
+      (sum, account) =>
+        sum + calculateAccountBalance(account, data.transactions),
+      0,
+    ),
+  );
+  const cashFlow = summarizeTransactions(data.transactions, currentMonthIso);
   const urgentTasks = data.tasks
     .filter((task) => task.status !== "done")
     .sort((a, b) => (a.due_date ?? "").localeCompare(b.due_date ?? ""))
@@ -90,7 +109,7 @@ export function Dashboard({ data }: DashboardProps) {
         <MetricCard
           label="이번 달 매출"
           value={formatCurrency(monthlyRevenue)}
-          detail="2026년 5월 발행 인보이스"
+          detail={`${currentYear}년 ${Number(currentMonth)}월 발행 인보이스`}
           tone="green"
         />
         <MetricCard
@@ -109,6 +128,25 @@ export function Dashboard({ data }: DashboardProps) {
           value={`${data.assets.filter((asset) => asset.is_portfolio).length}`}
           detail="쇼케이스 노출 자산"
         />
+      </section>
+
+      <section className="mt-3 grid gap-3 sm:grid-cols-2">
+        <Link href="/accounting" className="block">
+          <MetricCard
+            label="은행 잔액"
+            value={formatCurrency(totalBalance)}
+            detail={`${data.accounts.length}개 계좌 · 어카운팅 장부 기준`}
+            tone="coral"
+          />
+        </Link>
+        <Link href="/accounting" className="block">
+          <MetricCard
+            label="이번 달 현금흐름"
+            value={formatCurrency(cashFlow.net)}
+            detail={`입금 ${formatCurrency(cashFlow.moneyIn)} · 지출 ${formatCurrency(cashFlow.moneyOut)}`}
+            tone={cashFlow.net >= 0 ? "green" : "neutral"}
+          />
+        </Link>
       </section>
 
       <section className="mt-8 grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">

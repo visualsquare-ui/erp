@@ -79,6 +79,8 @@ export async function getDashboardData() {
     invoicesResult,
     billsResult,
     assetsResult,
+    accountsResult,
+    transactionsResult,
   ] = await Promise.all([
     supabase.from("clients").select("*").order("created_at"),
     supabase.from("projects").select("*, clients(company_name, name)").order("due_date"),
@@ -90,6 +92,8 @@ export async function getDashboardData() {
       .order("due_date"),
     supabase.from("vendor_bills").select("*, vendors(name), projects(name, type)").order("due_date"),
     supabase.from("assets").select("*, projects(name, type)").eq("is_portfolio", true).order("created_at"),
+    supabase.from("bank_accounts").select("*").order("created_at"),
+    supabase.from("account_transactions").select("*").order("txn_date"),
   ]);
 
   return {
@@ -101,6 +105,8 @@ export async function getDashboardData() {
     invoices: (invoicesResult.data ?? []) as InvoiceRow[],
     bills: (billsResult.data ?? []) as VendorBillRow[],
     assets: (assetsResult.data ?? []) as AssetRow[],
+    accounts: (accountsResult.data ?? []) as BankAccountRow[],
+    transactions: (transactionsResult.data ?? []) as AccountTransactionRow[],
   };
 }
 
@@ -231,8 +237,13 @@ export async function getProjectDetailData(id: string) {
 
 export async function getInvoicesPageData() {
   const { user, supabase } = await getAuthedSupabase("/invoices");
-  const [clientsResult, projectsResult, purchaseOrdersResult, invoicesResult] =
-    await Promise.all([
+  const [
+    clientsResult,
+    projectsResult,
+    purchaseOrdersResult,
+    invoicesResult,
+    accountsResult,
+  ] = await Promise.all([
     supabase.from("clients").select("*").order("company_name"),
     supabase.from("projects").select("*, clients(company_name, name)").order("name"),
     supabase
@@ -243,6 +254,7 @@ export async function getInvoicesPageData() {
       .from("invoices")
       .select("*, clients(company_name, name, email, address), projects(name), invoice_items(*)")
       .order("issue_date", { ascending: false }),
+    supabase.from("bank_accounts").select("*").order("created_at"),
   ]);
 
   return {
@@ -253,6 +265,7 @@ export async function getInvoicesPageData() {
       (order) => !isPurchaseOrderDeleted(order),
     ),
     invoices: (invoicesResult.data ?? []) as (InvoiceRow & { invoice_items: InvoiceItemRow[] })[],
+    accounts: (accountsResult.data ?? []) as BankAccountRow[],
   };
 }
 

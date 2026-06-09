@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildInvoiceSyncUpdate,
+  buildProfitAndLoss,
   buildVendorBillSyncUpdate,
   calculateAccountBalance,
   getSignedAmount,
@@ -30,6 +31,57 @@ describe("calculateAccountBalance", () => {
     ];
 
     expect(calculateAccountBalance(account, transactions)).toBe(1439.18);
+  });
+});
+
+describe("buildProfitAndLoss", () => {
+  it("groups the month's transactions by category with totals and net", () => {
+    const report = buildProfitAndLoss(
+      [
+        {
+          type: "client_payment" as const,
+          amount: 500,
+          txn_date: "2026-06-09",
+          category: "Design Services",
+        },
+        {
+          type: "client_payment" as const,
+          amount: 200,
+          txn_date: "2026-06-15",
+          category: "Design Services",
+        },
+        {
+          type: "expense" as const,
+          amount: 80.5,
+          txn_date: "2026-06-10",
+          category: "Software & Subscriptions",
+        },
+        {
+          type: "vendor_payment" as const,
+          amount: 120,
+          txn_date: "2026-06-11",
+          category: null,
+        },
+        {
+          type: "expense" as const,
+          amount: 999,
+          txn_date: "2026-05-30",
+          category: "Rent & Lease",
+        },
+      ],
+      "2026-06",
+    );
+
+    expect(report.income).toEqual([
+      { category: "Design Services", total: 700 },
+    ]);
+    expect(report.expense).toEqual([
+      { category: "미분류", total: 120 },
+      { category: "Software & Subscriptions", total: 80.5 },
+    ]);
+    expect(report.incomeTotal).toBe(700);
+    expect(report.expenseTotal).toBe(200.5);
+    expect(report.net).toBe(499.5);
   });
 });
 

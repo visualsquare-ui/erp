@@ -16,6 +16,7 @@ import { ListActionButton } from "@/components/erp/list-action-button";
 import { MetricCard } from "@/components/erp/metric-card";
 import {
   type AccountTransactionType,
+  buildProfitAndLoss,
   calculateAccountBalance,
   expenseCategories,
   getSignedAmount,
@@ -99,6 +100,11 @@ export function AccountingManagement({
   );
 
   const currentMonthIso = new Date().toISOString().slice(0, 7);
+  const [reportMonth, setReportMonth] = useState(currentMonthIso);
+  const profitAndLoss = useMemo(
+    () => buildProfitAndLoss(transactions, reportMonth),
+    [transactions, reportMonth],
+  );
   const summary = useMemo(
     () => summarizeTransactions(transactions, currentMonthIso),
     [transactions, currentMonthIso],
@@ -313,7 +319,7 @@ export function AccountingManagement({
             </select>
             <button
               type="button"
-              className="ui-button sm:w-auto"
+              className="ui-button shrink-0 whitespace-nowrap sm:w-auto"
               onClick={() => {
                 setEditingTransaction(null);
                 setTransactionFormMode("create");
@@ -432,6 +438,110 @@ export function AccountingManagement({
           )}
         </div>
       </section>
+
+      <section className="space-y-4">
+        <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+          <div>
+            <h2 className="text-lg font-semibold">월별 손익</h2>
+            <p className="mt-1 text-sm text-[var(--muted)]">
+              해당 월의 거래 기록을 카테고리별로 집계합니다 (현금 기준).
+            </p>
+          </div>
+          <input
+            className="ui-input h-9 w-auto text-sm"
+            type="month"
+            value={reportMonth}
+            onChange={(event) =>
+              setReportMonth(event.target.value || currentMonthIso)
+            }
+            aria-label="손익 기준 월"
+          />
+        </div>
+
+        {profitAndLoss.income.length === 0 &&
+        profitAndLoss.expense.length === 0 ? (
+          <EmptyState
+            title="해당 월 거래 없음"
+            description="거래 기록이 쌓이면 카테고리별 수입과 지출이 집계됩니다."
+          />
+        ) : (
+          <div className="ui-card">
+            <div className="grid divide-y divide-[var(--border)] md:grid-cols-2 md:divide-x md:divide-y-0">
+              <ProfitAndLossColumn
+                title="수입"
+                lines={profitAndLoss.income}
+                total={profitAndLoss.incomeTotal}
+                tone="in"
+              />
+              <ProfitAndLossColumn
+                title="지출"
+                lines={profitAndLoss.expense}
+                total={profitAndLoss.expenseTotal}
+                tone="out"
+              />
+            </div>
+            <div className="flex items-center justify-between gap-3 border-t border-[var(--border)] bg-[var(--surface)] px-4 py-3">
+              <span className="text-sm font-semibold">순이익 (Net)</span>
+              <span
+                className={`text-base font-semibold tabular-nums ${
+                  profitAndLoss.net >= 0
+                    ? "text-[var(--success)]"
+                    : "text-[#8a2f1e]"
+                }`}
+              >
+                {formatCurrency(profitAndLoss.net)}
+              </span>
+            </div>
+          </div>
+        )}
+      </section>
+    </div>
+  );
+}
+
+function ProfitAndLossColumn({
+  title,
+  lines,
+  total,
+  tone,
+}: {
+  title: string;
+  lines: { category: string; total: number }[];
+  total: number;
+  tone: "in" | "out";
+}) {
+  return (
+    <div className="p-4">
+      <h3 className="ui-label">{title}</h3>
+      <div className="mt-3 space-y-1.5">
+        {lines.length === 0 ? (
+          <p className="text-sm text-[var(--muted)]">기록 없음</p>
+        ) : (
+          lines.map((line) => (
+            <p
+              key={line.category}
+              className="flex justify-between gap-3 text-sm"
+            >
+              <span className="min-w-0 truncate text-[var(--muted)]">
+                {line.category}
+              </span>
+              <span className="font-semibold tabular-nums">
+                {formatCurrency(line.total)}
+              </span>
+            </p>
+          ))
+        )}
+      </div>
+      <p className="mt-3 flex justify-between gap-3 border-t border-[var(--border)] pt-2 text-sm">
+        <span className="font-semibold">{title} 합계</span>
+        <span
+          className={`font-semibold tabular-nums ${
+            tone === "in" ? "text-[var(--success)]" : "text-[#8a2f1e]"
+          }`}
+        >
+          {formatCurrency(total)}
+        </span>
+      </p>
     </div>
   );
 }
