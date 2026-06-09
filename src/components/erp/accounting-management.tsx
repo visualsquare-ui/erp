@@ -743,7 +743,7 @@ function TransactionForm({
                 ))}
               </select>
             </Field>
-            <Field label="Invoice (선택)">
+            <Field label="Invoice (연결 시 입금액·상태 자동 반영)">
               <select
                 className="ui-input"
                 name="invoice_id"
@@ -777,7 +777,7 @@ function TransactionForm({
                 ))}
               </select>
             </Field>
-            <Field label="Bill (선택)">
+            <Field label="Bill (연결 시 자동 Paid 처리)">
               <select
                 className="ui-input"
                 name="vendor_bill_id"

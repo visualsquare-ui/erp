@@ -4,6 +4,10 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import {
+  buildInvoiceSyncUpdate,
+  buildVendorBillSyncUpdate,
+} from "@/lib/accounting";
+import {
   calculateInvoiceDraft,
   isExtraRevision,
   roundMoney,
@@ -1117,18 +1121,99 @@ function transactionPayload(formData: FormData) {
   };
 }
 
+async function syncLinkedInvoice(
+  supabase: AuthedSupabaseClient,
+  invoiceId: string | null | undefined,
+) {
+  if (!invoiceId) {
+    return;
+  }
+
+  const { data: invoice } = await supabase
+    .from("invoices")
+    .select("total, status, paid_amount, stripe_payment_status")
+    .eq("id", invoiceId)
+    .single();
+
+  if (!invoice) {
+    return;
+  }
+
+  const { data: payments } = await supabase
+    .from("account_transactions")
+    .select("amount, txn_date")
+    .eq("invoice_id", invoiceId)
+    .eq("type", "client_payment");
+  const update = buildInvoiceSyncUpdate(invoice, payments ?? []);
+
+  if (update) {
+    await supabase.from("invoices").update(update).eq("id", invoiceId);
+  }
+}
+
+async function syncLinkedVendorBill(
+  supabase: AuthedSupabaseClient,
+  vendorBillId: string | null | undefined,
+) {
+  if (!vendorBillId) {
+    return;
+  }
+
+  const { data: payments } = await supabase
+    .from("account_transactions")
+    .select("amount, txn_date")
+    .eq("vendor_bill_id", vendorBillId)
+    .eq("type", "vendor_payment");
+
+  await supabase
+    .from("vendor_bills")
+    .update(buildVendorBillSyncUpdate(payments ?? []))
+    .eq("id", vendorBillId);
+}
+
+async function syncTransactionLinks(
+  supabase: AuthedSupabaseClient,
+  links: {
+    invoice_id?: string | null;
+    vendor_bill_id?: string | null;
+  }[],
+) {
+  const invoiceIds = [
+    ...new Set(links.map((link) => link.invoice_id).filter(Boolean)),
+  ];
+  const vendorBillIds = [
+    ...new Set(links.map((link) => link.vendor_bill_id).filter(Boolean)),
+  ];
+
+  for (const invoiceId of invoiceIds) {
+    await syncLinkedInvoice(supabase, invoiceId);
+  }
+
+  for (const vendorBillId of vendorBillIds) {
+    await syncLinkedVendorBill(supabase, vendorBillId);
+  }
+}
+
+function revalidateAccountingPaths() {
+  revalidatePath("/accounting");
+  revalidatePath("/invoices");
+  revalidatePath("/purchasing");
+  revalidatePath("/");
+}
+
 export async function createTransactionAction(formData: FormData) {
   const { supabase } = await getAuthedSupabase("/accounting");
+  const payload = transactionPayload(formData);
   const { error } = await supabase
     .from("account_transactions")
-    .insert(transactionPayload(formData));
+    .insert(payload);
 
   if (error) {
     throw new Error(`거래 저장 실패: ${error.message}`);
   }
 
-  revalidatePath("/accounting");
-  revalidatePath("/");
+  await syncTransactionLinks(supabase, [payload]);
+  revalidateAccountingPaths();
 }
 
 export async function updateTransactionAction(formData: FormData) {
@@ -1139,17 +1224,23 @@ export async function updateTransactionAction(formData: FormData) {
   }
 
   const { supabase } = await getAuthedSupabase("/accounting");
+  const payload = transactionPayload(formData);
+  const { data: previous } = await supabase
+    .from("account_transactions")
+    .select("invoice_id, vendor_bill_id")
+    .eq("id", transactionId)
+    .single();
   const { error } = await supabase
     .from("account_transactions")
-    .update(transactionPayload(formData))
+    .update(payload)
     .eq("id", transactionId);
 
   if (error) {
     throw new Error(`거래 수정 실패: ${error.message}`);
   }
 
-  revalidatePath("/accounting");
-  revalidatePath("/");
+  await syncTransactionLinks(supabase, [payload, previous ?? {}]);
+  revalidateAccountingPaths();
 }
 
 export async function deleteTransactionAction(formData: FormData) {
@@ -1160,6 +1251,11 @@ export async function deleteTransactionAction(formData: FormData) {
   }
 
   const { supabase } = await getAuthedSupabase("/accounting");
+  const { data: previous } = await supabase
+    .from("account_transactions")
+    .select("invoice_id, vendor_bill_id")
+    .eq("id", transactionId)
+    .single();
   const { error } = await supabase
     .from("account_transactions")
     .delete()
@@ -1169,6 +1265,6 @@ export async function deleteTransactionAction(formData: FormData) {
     throw new Error(`거래 삭제 실패: ${error.message}`);
   }
 
-  revalidatePath("/accounting");
-  revalidatePath("/");
+  await syncTransactionLinks(supabase, [previous ?? {}]);
+  revalidateAccountingPaths();
 }

@@ -1,4 +1,5 @@
 import { roundMoney, toNumber } from "./erp-calculations";
+import type { InvoiceStatus } from "../types/erp";
 
 export type AccountTransactionType =
   | "client_payment"
@@ -102,6 +103,87 @@ export function calculateAccountBalance(
         toNumber(account.starting_balance),
       ),
   );
+}
+
+type LedgerPayment = {
+  amount: number | string;
+  txn_date: string;
+};
+
+type InvoiceSyncSource = {
+  total: number | string;
+  status: InvoiceStatus;
+  paid_amount: number | string;
+  stripe_payment_status: string | null;
+};
+
+export type InvoiceSyncUpdate = {
+  paid_amount: number;
+  paid_date: string | null;
+  status: InvoiceStatus;
+};
+
+function latestTransactionDate(payments: LedgerPayment[]): string | null {
+  return (
+    payments
+      .map((payment) => payment.txn_date)
+      .sort()
+      .at(-1) ?? null
+  );
+}
+
+// Recomputes invoice payment fields from ledger transactions linked to it.
+// Returns null when nothing should change (e.g. Stripe-paid invoices with
+// no ledger entries are left untouched).
+export function buildInvoiceSyncUpdate(
+  invoice: InvoiceSyncSource,
+  payments: LedgerPayment[],
+): InvoiceSyncUpdate | null {
+  const ledgerPaid = roundMoney(
+    payments.reduce((sum, payment) => sum + toNumber(payment.amount), 0),
+  );
+
+  if (ledgerPaid <= 0) {
+    if (invoice.stripe_payment_status === "paid") {
+      return null;
+    }
+
+    if (invoice.status !== "paid" && toNumber(invoice.paid_amount) === 0) {
+      return null;
+    }
+
+    return {
+      paid_amount: 0,
+      paid_date: null,
+      status: invoice.status === "paid" ? "sent" : invoice.status,
+    };
+  }
+
+  return {
+    paid_amount: ledgerPaid,
+    paid_date: latestTransactionDate(payments),
+    status:
+      ledgerPaid >= toNumber(invoice.total)
+        ? "paid"
+        : invoice.status === "paid"
+          ? "sent"
+          : invoice.status,
+  };
+}
+
+export type VendorBillSyncUpdate = {
+  status: "received" | "paid";
+  paid_date: string | null;
+};
+
+export function buildVendorBillSyncUpdate(
+  payments: LedgerPayment[],
+): VendorBillSyncUpdate {
+  const paidDate = latestTransactionDate(payments);
+
+  return paidDate
+    ? { status: "paid", paid_date: paidDate }
+    : { status: "received", paid_date: null };
 }
 
 export function summarizeTransactions(

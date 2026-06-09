@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  buildInvoiceSyncUpdate,
+  buildVendorBillSyncUpdate,
   calculateAccountBalance,
   getSignedAmount,
   summarizeTransactions,
@@ -28,6 +30,99 @@ describe("calculateAccountBalance", () => {
     ];
 
     expect(calculateAccountBalance(account, transactions)).toBe(1439.18);
+  });
+});
+
+describe("buildInvoiceSyncUpdate", () => {
+  it("marks the invoice paid when ledger payments reach the total", () => {
+    expect(
+      buildInvoiceSyncUpdate(
+        {
+          total: 475.18,
+          status: "sent",
+          paid_amount: 0,
+          stripe_payment_status: null,
+        },
+        [
+          { amount: 400, txn_date: "2026-06-09" },
+          { amount: 75.18, txn_date: "2026-06-10" },
+        ],
+      ),
+    ).toEqual({ paid_amount: 475.18, paid_date: "2026-06-10", status: "paid" });
+  });
+
+  it("keeps the current status for partial payments", () => {
+    expect(
+      buildInvoiceSyncUpdate(
+        {
+          total: 475.18,
+          status: "sent",
+          paid_amount: 0,
+          stripe_payment_status: null,
+        },
+        [{ amount: 100, txn_date: "2026-06-09" }],
+      ),
+    ).toEqual({ paid_amount: 100, paid_date: "2026-06-09", status: "sent" });
+  });
+
+  it("reverts a ledger-paid invoice when its payments are removed", () => {
+    expect(
+      buildInvoiceSyncUpdate(
+        {
+          total: 100,
+          status: "paid",
+          paid_amount: 100,
+          stripe_payment_status: null,
+        },
+        [],
+      ),
+    ).toEqual({ paid_amount: 0, paid_date: null, status: "sent" });
+  });
+
+  it("leaves Stripe-paid invoices untouched when no ledger payments exist", () => {
+    expect(
+      buildInvoiceSyncUpdate(
+        {
+          total: 100,
+          status: "paid",
+          paid_amount: 100,
+          stripe_payment_status: "paid",
+        },
+        [],
+      ),
+    ).toBeNull();
+  });
+
+  it("does nothing for unpaid invoices with no ledger payments", () => {
+    expect(
+      buildInvoiceSyncUpdate(
+        {
+          total: 100,
+          status: "sent",
+          paid_amount: 0,
+          stripe_payment_status: null,
+        },
+        [],
+      ),
+    ).toBeNull();
+  });
+});
+
+describe("buildVendorBillSyncUpdate", () => {
+  it("marks the bill paid using the latest payment date", () => {
+    expect(
+      buildVendorBillSyncUpdate([
+        { amount: 50, txn_date: "2026-06-09" },
+        { amount: 70, txn_date: "2026-06-11" },
+      ]),
+    ).toEqual({ status: "paid", paid_date: "2026-06-11" });
+  });
+
+  it("reverts to received when no payments remain", () => {
+    expect(buildVendorBillSyncUpdate([])).toEqual({
+      status: "received",
+      paid_date: null,
+    });
   });
 });
 
