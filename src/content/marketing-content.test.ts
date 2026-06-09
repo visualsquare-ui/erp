@@ -42,7 +42,9 @@ describe("marketing content", () => {
       "production",
     );
 
-    expect(getPublishedBlogPosts(productionDate)).toHaveLength(0);
+    expect(getPublishedBlogPosts(productionDate).map((post) => post.slug)).toEqual([
+      "branding-checklist-before-opening-med-spa-ny-nj",
+    ]);
   });
 
   it("connects blog topics to industry pages", () => {
