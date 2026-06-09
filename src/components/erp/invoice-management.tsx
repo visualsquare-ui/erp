@@ -23,6 +23,7 @@ import {
   type InvoiceLineDraft,
 } from "@/lib/invoice-po-items";
 import { getInvoicePaymentLinks } from "@/lib/payment-links";
+import { NJ_SALES_TAX_RATE_INPUT } from "@/lib/sales-tax";
 import type {
   ClientRow,
   InvoiceItemRow,
@@ -62,7 +63,7 @@ function createManualInvoiceItem(): InvoiceFormItem {
     quantity: "1",
     unitPrice: "",
     isTaxable: false,
-    taxRate: "0.06625",
+    taxRate: NJ_SALES_TAX_RATE_INPUT,
   };
 }
 
@@ -74,7 +75,7 @@ function invoiceDraftToFormItem(item: InvoiceLineDraft): InvoiceFormItem {
     quantity: String(item.quantity),
     unitPrice: String(item.unitPrice),
     isTaxable: false,
-    taxRate: "0.06625",
+    taxRate: NJ_SALES_TAX_RATE_INPUT,
   };
 }
 
@@ -489,7 +490,7 @@ function InvoiceForm({
               <span>Description</span>
               <span>Qty</span>
               <span>Unit</span>
-              <span>Tax</span>
+              <span title="체크하면 NJ Sales Tax 6.625%가 부과됩니다">Taxable</span>
               <span>Tax Rate</span>
               <span className="text-right">Total</span>
               <span />

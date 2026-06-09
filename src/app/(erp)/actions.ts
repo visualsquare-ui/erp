@@ -1009,3 +1009,166 @@ export async function deleteInvoiceAction(formData: FormData) {
   }
   revalidatePath("/");
 }
+
+export async function createBankAccountAction(formData: FormData) {
+  const { supabase } = await getAuthedSupabase("/accounting");
+  const { error } = await supabase.from("bank_accounts").insert({
+    name: text(formData, "name") ?? "New account",
+    institution: text(formData, "institution"),
+    account_type: text(formData, "account_type") ?? "checking",
+    last4: text(formData, "last4"),
+    starting_balance: money(formData, "starting_balance"),
+    opened_date: text(formData, "opened_date"),
+    memo: text(formData, "memo"),
+  });
+
+  if (error) {
+    throw new Error(`계좌 저장 실패: ${error.message}`);
+  }
+
+  revalidatePath("/accounting");
+  revalidatePath("/");
+}
+
+export async function updateBankAccountAction(formData: FormData) {
+  const accountId = text(formData, "bank_account_id");
+
+  if (!accountId) {
+    return;
+  }
+
+  const { supabase } = await getAuthedSupabase("/accounting");
+  const { error } = await supabase
+    .from("bank_accounts")
+    .update({
+      name: text(formData, "name") ?? "New account",
+      institution: text(formData, "institution"),
+      account_type: text(formData, "account_type") ?? "checking",
+      last4: text(formData, "last4"),
+      starting_balance: money(formData, "starting_balance"),
+      opened_date: text(formData, "opened_date"),
+      is_active: checkbox(formData, "is_active"),
+      memo: text(formData, "memo"),
+    })
+    .eq("id", accountId);
+
+  if (error) {
+    throw new Error(`계좌 수정 실패: ${error.message}`);
+  }
+
+  revalidatePath("/accounting");
+  revalidatePath("/");
+}
+
+export async function deleteBankAccountAction(formData: FormData) {
+  const accountId = text(formData, "bank_account_id");
+
+  if (!accountId) {
+    return;
+  }
+
+  const { supabase } = await getAuthedSupabase("/accounting");
+  const { error } = await supabase
+    .from("bank_accounts")
+    .delete()
+    .eq("id", accountId);
+
+  if (error) {
+    throw new Error(
+      `계좌 삭제 실패: 거래 기록이 있는 계좌는 삭제할 수 없습니다. (${error.message})`,
+    );
+  }
+
+  revalidatePath("/accounting");
+  revalidatePath("/");
+}
+
+function transactionPayload(formData: FormData) {
+  const amount = money(formData, "amount");
+
+  if (amount <= 0) {
+    throw new Error("거래 금액은 0보다 커야 합니다.");
+  }
+
+  const bankAccountId = text(formData, "bank_account_id");
+
+  if (!bankAccountId) {
+    throw new Error("거래를 저장하려면 계좌를 선택해야 합니다.");
+  }
+
+  return {
+    bank_account_id: bankAccountId,
+    txn_date: text(formData, "txn_date") ?? todayIso(),
+    type: (text(formData, "type") ?? "expense") as
+      | "client_payment"
+      | "other_income"
+      | "vendor_payment"
+      | "expense",
+    amount,
+    payee: text(formData, "payee"),
+    category: text(formData, "category"),
+    payment_method: text(formData, "payment_method"),
+    description: text(formData, "description"),
+    memo: text(formData, "memo"),
+    client_id: text(formData, "client_id"),
+    vendor_id: text(formData, "vendor_id"),
+    invoice_id: text(formData, "invoice_id"),
+    vendor_bill_id: text(formData, "vendor_bill_id"),
+  };
+}
+
+export async function createTransactionAction(formData: FormData) {
+  const { supabase } = await getAuthedSupabase("/accounting");
+  const { error } = await supabase
+    .from("account_transactions")
+    .insert(transactionPayload(formData));
+
+  if (error) {
+    throw new Error(`거래 저장 실패: ${error.message}`);
+  }
+
+  revalidatePath("/accounting");
+  revalidatePath("/");
+}
+
+export async function updateTransactionAction(formData: FormData) {
+  const transactionId = text(formData, "transaction_id");
+
+  if (!transactionId) {
+    return;
+  }
+
+  const { supabase } = await getAuthedSupabase("/accounting");
+  const { error } = await supabase
+    .from("account_transactions")
+    .update(transactionPayload(formData))
+    .eq("id", transactionId);
+
+  if (error) {
+    throw new Error(`거래 수정 실패: ${error.message}`);
+  }
+
+  revalidatePath("/accounting");
+  revalidatePath("/");
+}
+
+export async function deleteTransactionAction(formData: FormData) {
+  const transactionId = text(formData, "transaction_id");
+
+  if (!transactionId) {
+    return;
+  }
+
+  const { supabase } = await getAuthedSupabase("/accounting");
+  const { error } = await supabase
+    .from("account_transactions")
+    .delete()
+    .eq("id", transactionId);
+
+  if (error) {
+    throw new Error(`거래 삭제 실패: ${error.message}`);
+  }
+
+  revalidatePath("/accounting");
+  revalidatePath("/");
+}

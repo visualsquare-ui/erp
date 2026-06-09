@@ -5,6 +5,7 @@ import {
   FileText,
   Folder,
   GalleryHorizontalEnd,
+  Landmark,
   LayoutDashboard,
   ReceiptText,
   Truck,
@@ -22,6 +23,7 @@ const navItems = [
   { label: "Jobs", href: "/jobs", icon: BriefcaseBusiness },
   { label: "PO / Bill", href: "/purchasing", icon: ReceiptText },
   { label: "Invoice", href: "/invoices", icon: FileText },
+  { label: "어카운팅", href: "/accounting", icon: Landmark },
   { label: "프로젝트", href: "/projects", icon: Folder },
   { label: "포트폴리오", href: "/portfolio", icon: GalleryHorizontalEnd },
 ];

@@ -1,3 +1,4 @@
+import type { AccountTransactionType } from "@/lib/accounting";
 import type { PaymentTerms } from "@/lib/format";
 import type { ProjectType } from "@/lib/project-rules";
 import type { InvoiceStatus, ProjectStatus, TaskStatus } from "@/types/erp";
@@ -153,6 +154,42 @@ export type PurchaseOrderRow = {
   created_at: string;
   vendors?: Pick<VendorRow, "name"> | null;
   projects?: Pick<ProjectRow, "name" | "type"> | null;
+};
+
+export type BankAccountRow = {
+  id: string;
+  name: string;
+  institution: string | null;
+  account_type: "checking" | "savings" | "credit_card" | "cash";
+  last4: string | null;
+  starting_balance: string | number;
+  opened_date: string | null;
+  is_active: boolean;
+  memo: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type AccountTransactionRow = {
+  id: string;
+  bank_account_id: string;
+  txn_date: string;
+  type: AccountTransactionType;
+  amount: string | number;
+  payee: string | null;
+  category: string | null;
+  payment_method: string | null;
+  description: string | null;
+  memo: string | null;
+  client_id: string | null;
+  vendor_id: string | null;
+  invoice_id: string | null;
+  vendor_bill_id: string | null;
+  created_at: string;
+  updated_at: string;
+  clients?: Pick<ClientRow, "company_name" | "name"> | null;
+  vendors?: Pick<VendorRow, "name"> | null;
+  bank_accounts?: Pick<BankAccountRow, "name" | "institution"> | null;
 };
 
 export type VendorBillRow = {

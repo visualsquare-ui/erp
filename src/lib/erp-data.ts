@@ -3,7 +3,9 @@ import { redirect } from "next/navigation";
 import { getLoginRedirectPath } from "@/lib/auth-routes";
 import { createClient } from "@/lib/supabase/server";
 import type {
+  AccountTransactionRow,
   AssetRow,
+  BankAccountRow,
   ClientRow,
   InvoiceItemRow,
   InvoiceRow,
@@ -306,6 +308,84 @@ export async function getVendorsPageData() {
       purchase_orders: PurchaseOrderRow[];
       vendor_bills: VendorBillRow[];
     })[],
+  };
+}
+
+function getMissingAccountingTableMessage(
+  errors: ({ message: string } | null)[],
+) {
+  const missing = errors.find(
+    (error) =>
+      error &&
+      (error.message.includes("public.bank_accounts") ||
+        error.message.includes("public.account_transactions")),
+  );
+
+  if (missing) {
+    return "Supabase에 어카운팅 테이블이 아직 없습니다. supabase/migrations/202606090001_accounting.sql 을 실행해 주세요.";
+  }
+
+  return null;
+}
+
+export async function getAccountingPageData() {
+  const { user, supabase } = await getAuthedSupabase("/accounting");
+  const [
+    accountsResult,
+    transactionsResult,
+    clientsResult,
+    vendorsResult,
+    invoicesResult,
+    billsResult,
+  ] = await Promise.all([
+    supabase
+      .from("bank_accounts")
+      .select("*")
+      .order("created_at", { ascending: true }),
+    supabase
+      .from("account_transactions")
+      .select(
+        "*, clients(company_name, name), vendors(name), bank_accounts(name, institution)",
+      )
+      .order("txn_date", { ascending: false })
+      .order("created_at", { ascending: false }),
+    supabase.from("clients").select("*").order("company_name"),
+    supabase.from("vendors").select("*").order("name"),
+    supabase
+      .from("invoices")
+      .select("id, invoice_number, total, status, clients(company_name, name)")
+      .order("issue_date", { ascending: false }),
+    supabase
+      .from("vendor_bills")
+      .select("id, bill_number, amount, status, vendors(name)")
+      .order("received_date", { ascending: false }),
+  ]);
+
+  const setupError = getMissingAccountingTableMessage([
+    accountsResult.error,
+    transactionsResult.error,
+  ]);
+
+  if (!setupError) {
+    throwIfSupabaseError(accountsResult.error, "Bank accounts 조회 실패");
+    throwIfSupabaseError(transactionsResult.error, "Transactions 조회 실패");
+  }
+
+  return {
+    user,
+    setupError,
+    accounts: (accountsResult.data ?? []) as BankAccountRow[],
+    transactions: (transactionsResult.data ?? []) as AccountTransactionRow[],
+    clients: (clientsResult.data ?? []) as ClientRow[],
+    vendors: (vendorsResult.data ?? []) as VendorRow[],
+    invoices: (invoicesResult.data ?? []) as unknown as (Pick<
+      InvoiceRow,
+      "id" | "invoice_number" | "total" | "status"
+    > & { clients: Pick<ClientRow, "company_name" | "name"> | null })[],
+    bills: (billsResult.data ?? []) as unknown as (Pick<
+      VendorBillRow,
+      "id" | "bill_number" | "amount" | "status"
+    > & { vendors: Pick<VendorRow, "name"> | null })[],
   };
 }
 
