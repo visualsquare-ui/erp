@@ -387,7 +387,7 @@ export function PurchasingManagement({
                 key={bill.id}
                 title={billDisplayNumbers.get(bill.id) ?? "Bill"}
                 meta={[
-                  bill.projects?.name ?? "-",
+                  bill.description ?? bill.projects?.name ?? "-",
                   bill.vendors?.name ?? "-",
                   bill.due_date ? `Due ${formatUsDate(bill.due_date)}` : "No due date",
                 ].join(" · ")}
@@ -812,7 +812,7 @@ function VendorBillForm({
 
     if (error) {
       setUploadError(
-        `업로드에 실패했습니다. ${error.message} Storage SQL이 적용됐는지 확인해 주세요.`,
+        `업로드에 실패했습니다. ${error.message} — Supabase SQL Editor에서 supabase/migrations/202606100001_vendor_bill_description.sql 을 실행해 주세요.`,
       );
       return;
     }
@@ -847,63 +847,7 @@ function VendorBillForm({
       ) : null}
       <input type="hidden" name="file_url" value={fileReference} />
 
-      <Field label="PO">
-        <select
-          className="ui-input"
-          name="purchase_order_id"
-          value={selectedPurchaseOrderId}
-          onChange={(event) => selectPurchaseOrder(event.target.value)}
-        >
-          <option value="">Select PO</option>
-          {purchaseOrders.map((purchaseOrder) => (
-            <option key={purchaseOrder.id} value={purchaseOrder.id}>
-              {poDisplayNumbers.get(purchaseOrder.id) ??
-                purchaseOrder.po_number}{" "}
-              · {purchaseOrder.projects?.name ?? "-"} ·{" "}
-              {formatCurrency(toNumber(purchaseOrder.amount))}
-            </option>
-          ))}
-        </select>
-      </Field>
-      {selectedPurchaseOrder ? (
-        <div className="border border-[var(--border)] bg-white px-3 py-2 text-xs">
-          <p className="mb-2 font-semibold uppercase tracking-[0.08em] text-[var(--muted)]">
-            PO items
-          </p>
-          <div className="space-y-1">
-            {selectedPurchaseOrderItems.map((item, index) => (
-              <div
-                key={`${item.item}-${index}`}
-                className="flex justify-between gap-3 text-[var(--muted)]"
-              >
-                <span className="min-w-0 break-words">{item.item || "-"}</span>
-                <span className="shrink-0 tabular-nums">
-                  {formatCurrency(
-                    toNumber(item.unitPrice) * (toNumber(item.qty) || 0),
-                  )}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      ) : null}
-
       <div className="grid gap-3 md:grid-cols-2">
-        <Field label="Project Group">
-          <select
-            className="ui-input"
-            name="project_id"
-            value={projectId}
-            onChange={(event) => setProjectId(event.target.value)}
-          >
-            <option value="">No project group</option>
-            {projects.map((project) => (
-              <option key={project.id} value={project.id}>
-                {project.name}
-              </option>
-            ))}
-          </select>
-        </Field>
         <Field label="Vendor">
           <select
             className="ui-input"
@@ -920,17 +864,17 @@ function VendorBillForm({
             ))}
           </select>
         </Field>
-      </div>
-      <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_9rem_9rem]">
-        <Field label="Bill Number">
+        <Field label="Description">
           <input
             className="ui-input"
-            name="bill_number"
-            placeholder="비워두면 자동 생성"
+            name="description"
+            placeholder="Mailbox service, 명함 인쇄..."
             autoComplete="off"
-            defaultValue={bill?.bill_number ?? ""}
+            defaultValue={bill?.description ?? ""}
           />
         </Field>
+      </div>
+      <div className="grid gap-3 md:grid-cols-[9rem_9rem_minmax(0,1fr)_minmax(0,1fr)]">
         <Field label="Amount">
           <input
             className="ui-input"
@@ -953,15 +897,92 @@ function VendorBillForm({
             <option value="paid">Paid</option>
           </select>
         </Field>
+        <Field label="Due Date">
+          <input
+            className="ui-input"
+            name="due_date"
+            type="date"
+            defaultValue={bill?.due_date ?? ""}
+          />
+        </Field>
+        <Field label="Bill Number">
+          <input
+            className="ui-input"
+            name="bill_number"
+            placeholder="비워두면 자동 생성"
+            autoComplete="off"
+            defaultValue={bill?.bill_number ?? ""}
+          />
+        </Field>
       </div>
-      <Field label="Due Date">
-        <input
-          className="ui-input"
-          name="due_date"
-          type="date"
-          defaultValue={bill?.due_date ?? ""}
-        />
-      </Field>
+
+      <details
+        className="border border-[var(--border)] bg-white"
+        open={Boolean(bill?.purchase_order_id || bill?.project_id)}
+      >
+        <summary className="cursor-pointer list-none px-3 py-2.5 text-xs font-semibold text-[var(--muted)] transition-colors hover:text-[var(--foreground)]">
+          + PO / 프로젝트 연결 (선택) — 발주서에서 온 빌이면 여기서 연결하세요
+        </summary>
+        <div className="space-y-3 border-t border-[var(--border)] px-3 py-3">
+          <Field label="PO">
+            <select
+              className="ui-input"
+              name="purchase_order_id"
+              value={selectedPurchaseOrderId}
+              onChange={(event) => selectPurchaseOrder(event.target.value)}
+            >
+              <option value="">연결 안 함</option>
+              {purchaseOrders.map((purchaseOrder) => (
+                <option key={purchaseOrder.id} value={purchaseOrder.id}>
+                  {poDisplayNumbers.get(purchaseOrder.id) ??
+                    purchaseOrder.po_number}{" "}
+                  · {purchaseOrder.projects?.name ?? "-"} ·{" "}
+                  {formatCurrency(toNumber(purchaseOrder.amount))}
+                </option>
+              ))}
+            </select>
+          </Field>
+          {selectedPurchaseOrder ? (
+            <div className="border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs">
+              <p className="mb-2 font-semibold uppercase tracking-[0.08em] text-[var(--muted)]">
+                PO items
+              </p>
+              <div className="space-y-1">
+                {selectedPurchaseOrderItems.map((item, index) => (
+                  <div
+                    key={`${item.item}-${index}`}
+                    className="flex justify-between gap-3 text-[var(--muted)]"
+                  >
+                    <span className="min-w-0 break-words">
+                      {item.item || "-"}
+                    </span>
+                    <span className="shrink-0 tabular-nums">
+                      {formatCurrency(
+                        toNumber(item.unitPrice) * (toNumber(item.qty) || 0),
+                      )}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
+          <Field label="Project Group">
+            <select
+              className="ui-input"
+              name="project_id"
+              value={projectId}
+              onChange={(event) => setProjectId(event.target.value)}
+            >
+              <option value="">No project group</option>
+              {projects.map((project) => (
+                <option key={project.id} value={project.id}>
+                  {project.name}
+                </option>
+              ))}
+            </select>
+          </Field>
+        </div>
+      </details>
       <section className="space-y-2">
         <div className="flex items-center justify-between gap-3 border-b border-[var(--border)] pb-2">
           <h3 className="ui-label">Bill File</h3>

@@ -198,6 +198,7 @@ export type VendorBillRow = {
   vendor_id: string;
   purchase_order_id: string | null;
   bill_number: string | null;
+  description: string | null;
   received_date: string;
   due_date: string | null;
   amount: string | number;

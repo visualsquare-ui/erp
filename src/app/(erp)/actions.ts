@@ -23,7 +23,10 @@ import { addPaymentTermDays, type PaymentTerms } from "@/lib/format";
 import { optionalFormText } from "@/lib/form-values";
 import { getAuthedSupabase } from "@/lib/erp-data";
 import type { ProjectType } from "@/lib/project-rules";
-import { getInvoiceItemSchemaHint } from "@/lib/supabase-schema-errors";
+import {
+  getInvoiceItemSchemaHint,
+  getVendorBillSchemaHint,
+} from "@/lib/supabase-schema-errors";
 import type { ProjectStatus, TaskStatus } from "@/types/erp";
 
 function text(formData: FormData, key: string): string | null {
@@ -718,6 +721,7 @@ export async function createVendorBillAction(formData: FormData) {
     vendor_id: vendorId,
     purchase_order_id: text(formData, "purchase_order_id"),
     bill_number: billNumber,
+    description: text(formData, "description"),
     received_date: receivedDate,
     due_date: text(formData, "due_date"),
     amount: money(formData, "amount"),
@@ -727,7 +731,9 @@ export async function createVendorBillAction(formData: FormData) {
   });
 
   if (error) {
-    throw new Error(`Bill 저장 실패: ${error.message}`);
+    throw new Error(
+      `Bill 저장 실패: ${error.message}${getVendorBillSchemaHint(error.message)}`,
+    );
   }
 
   revalidatePath("/purchasing");
@@ -769,6 +775,7 @@ export async function updateVendorBillAction(formData: FormData) {
       vendor_id: vendorId,
       purchase_order_id: text(formData, "purchase_order_id"),
       bill_number: billNumber,
+      description: text(formData, "description"),
       received_date: receivedDate,
       due_date: text(formData, "due_date"),
       amount: money(formData, "amount"),
@@ -779,7 +786,9 @@ export async function updateVendorBillAction(formData: FormData) {
     .eq("id", billId);
 
   if (error) {
-    throw new Error(`Bill 수정 실패: ${error.message}`);
+    throw new Error(
+      `Bill 수정 실패: ${error.message}${getVendorBillSchemaHint(error.message)}`,
+    );
   }
 
   revalidatePath("/purchasing");

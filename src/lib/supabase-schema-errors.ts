@@ -17,3 +17,14 @@ export function getInvoiceItemSchemaHint(message: string) {
 
   return "";
 }
+
+export function getVendorBillSchemaHint(message: string) {
+  if (
+    message.includes("description") &&
+    (message.includes("vendor_bills") || message.includes("schema cache"))
+  ) {
+    return " Supabase SQL Editor에서 supabase/migrations/202606100001_vendor_bill_description.sql 을 실행한 뒤, 잠시 후 다시 저장해 주세요.";
+  }
+
+  return "";
+}
