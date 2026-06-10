@@ -14,6 +14,14 @@ import {
   getPaymentInstructions,
 } from "./payment-instructions";
 
+const COLORS = {
+  ink: "#141414",
+  muted: "#6f6660",
+  faint: "#9a928c",
+  line: "#e7e2dd",
+  coral: "#f57d4b",
+};
+
 export async function buildInvoicePdf(invoice: InvoiceDocument) {
   return new Promise<Buffer>((resolve, reject) => {
     const chunks: Buffer[] = [];
@@ -48,204 +56,212 @@ export async function buildInvoicePdf(invoice: InvoiceDocument) {
     doc.on("data", (chunk: Buffer) => chunks.push(chunk));
     doc.on("error", reject);
     doc.on("end", () => resolve(Buffer.concat(chunks)));
-    doc.registerFont("VSRegular", fontData);
-    doc.registerFont("VSBold", fontData);
+    doc.registerFont("VS", fontData);
+    doc.font("VS");
     doc.addPage();
 
-    doc.image(logoImage, 44, 38, {
-      fit: [96, 96],
-      align: "center",
-      valign: "center",
+    function strongRule(y: number, x1 = 48, x2 = 564) {
+      doc
+        .moveTo(x1, y)
+        .lineTo(x2, y)
+        .lineWidth(1.6)
+        .strokeColor(COLORS.ink)
+        .stroke();
+      doc.lineWidth(1);
+    }
+
+    function hairline(y: number, x1 = 48, x2 = 564) {
+      doc
+        .moveTo(x1, y)
+        .lineTo(x2, y)
+        .lineWidth(0.7)
+        .strokeColor(COLORS.line)
+        .stroke();
+      doc.lineWidth(1);
+    }
+
+    // Header: logo + invoice identity
+    doc.image(logoImage, 48, 38, { fit: [58, 58] });
+    doc
+      .fontSize(9.5)
+      .fillColor(COLORS.ink)
+      .text(`Invoice ${invoice.invoice_number}`, 348, 50, {
+        align: "right",
+        width: 216,
+      })
+      .fontSize(7)
+      .fillColor(COLORS.muted)
+      .text("Visual Square LLC · Palisades Park, NJ", 348, 65, {
+        align: "right",
+        width: 216,
+      });
+
+    strongRule(112);
+
+    // Meta grid: billed to / project / dates / total due
+    doc
+      .fontSize(6)
+      .fillColor(COLORS.faint)
+      .text("BILLED TO", 48, 128, { characterSpacing: 1.5 })
+      .text("PROJECT", 178, 128, { characterSpacing: 1.5 })
+      .text("DATES", 308, 128, { characterSpacing: 1.5 })
+      .text("TOTAL DUE", 444, 128, {
+        characterSpacing: 1.5,
+        width: 120,
+        align: "right",
+      });
+
+    doc
+      .fontSize(8.5)
+      .fillColor(COLORS.ink)
+      .text(recipient.name, 48, 142, { width: 122 });
+    doc
+      .fontSize(7.5)
+      .fillColor(COLORS.muted)
+      .text(recipient.address || recipient.email || "-", 48, 154, {
+        width: 122,
+        lineGap: 1.5,
+      });
+
+    doc
+      .fontSize(8.5)
+      .fillColor(COLORS.ink)
+      .text(invoice.projects?.name ?? "-", 178, 142, { width: 122 });
+
+    doc
+      .fontSize(8.5)
+      .fillColor(COLORS.ink)
+      .text(`Issued ${formatUsDate(invoice.issue_date)}`, 308, 142, {
+        width: 128,
+      })
+      .fontSize(7.5)
+      .fillColor(COLORS.muted)
+      .text(`Due ${formatUsDate(invoice.due_date)}`, 308, 154, { width: 128 });
+
+    doc
+      .fontSize(14)
+      .fillColor(COLORS.coral)
+      .text(formatCurrency(toNumber(invoice.total)), 414, 140, {
+        width: 150,
+        align: "right",
+      });
+
+    // Line items
+    let y = 226;
+    strongRule(y - 14);
+    doc.fontSize(6).fillColor(COLORS.faint);
+    doc.text("DESCRIPTION", 48, y - 6, { characterSpacing: 1.5 });
+    doc.text("QTY", 360, y - 6, {
+      width: 36,
+      align: "right",
+      characterSpacing: 1.5,
+    });
+    doc.text("UNIT", 420, y - 6, {
+      width: 54,
+      align: "right",
+      characterSpacing: 1.5,
+    });
+    doc.text("AMOUNT", 504, y - 6, {
+      width: 60,
+      align: "right",
+      characterSpacing: 1.5,
     });
 
-    doc
-      .font("VSBold")
-      .fontSize(11)
-      .fillColor("#f57d4b")
-      .text("INVOICE", 390, 52, { align: "right", width: 156 })
-      .fontSize(13)
-      .fillColor("#141414")
-      .text(invoice.invoice_number, 330, 76, { align: "right", width: 216 });
-
-    doc.moveTo(48, 124).lineTo(564, 124).strokeColor("#e7e2dd").stroke();
-
-    doc
-      .font("VSBold")
-      .fontSize(10)
-      .fillColor("#6f6660")
-      .text("BILL TO", 48, 154)
-      .font("VSBold")
-      .fontSize(13)
-      .fillColor("#141414")
-      .text(recipient.name, 48, 174)
-      .font("VSRegular")
-      .fontSize(10)
-      .fillColor("#6f6660")
-      .text(recipient.address || recipient.email || "-", 48, 194, {
-        width: 230,
-      });
-
-    doc
-      .font("VSRegular")
-      .fontSize(10)
-      .fillColor("#6f6660")
-      .text("Issue", 390, 154)
-      .fillColor("#141414")
-      .text(formatUsDate(invoice.issue_date), 470, 154, { align: "right" })
-      .fillColor("#6f6660")
-      .text("Due", 390, 174)
-      .fillColor("#141414")
-      .text(formatUsDate(invoice.due_date), 470, 174, { align: "right" })
-      .fillColor("#6f6660")
-      .text("Project", 390, 194)
-      .fillColor("#141414")
-      .text(invoice.projects?.name ?? "-", 470, 194, { align: "right" });
-
-    let y = 256;
-    const tableLeft = 48;
-    const columns = {
-      description: { x: 60, width: 276 },
-      quantity: { x: 348, width: 42 },
-      unit: { x: 410, width: 58 },
-      amount: { x: 486, width: 60 },
-    };
-
-    doc.rect(48, y - 24, 516, 28).fill("#fbf6f3");
-    doc
-      .font("VSBold")
-      .fontSize(9)
-      .fillColor("#6f6660")
-      .text("DESCRIPTION", columns.description.x, y - 15, {
-        width: columns.description.width,
-      })
-      .text("QTY", columns.quantity.x, y - 15, {
-        width: columns.quantity.width,
-        align: "right",
-      })
-      .text("UNIT", columns.unit.x, y - 15, {
-        width: columns.unit.width,
-        align: "right",
-      })
-      .text("AMOUNT", columns.amount.x, y - 15, {
-        width: columns.amount.width,
-        align: "right",
-      });
-
-    doc.font("VSRegular").fontSize(10).fillColor("#141414");
+    y += 12;
     lines.forEach((line) => {
-      const rowTop = y + 10;
+      hairline(y - 2);
       doc
-        .moveTo(48, rowTop - 8)
-        .lineTo(564, rowTop - 8)
-        .strokeColor("#e7e2dd")
-        .stroke();
+        .fontSize(8.5)
+        .fillColor(COLORS.ink)
+        .text(line.description, 48, y + 8, { width: 290 });
       doc
-        .fillColor("#141414")
-        .text(line.description, columns.description.x, rowTop, {
-          width: columns.description.width,
-        })
-        .text(String(line.quantity), columns.quantity.x, rowTop, {
-          width: columns.quantity.width,
-          align: "right",
-        })
-        .text(formatCurrency(line.unitPrice), columns.unit.x, rowTop, {
-          width: columns.unit.width,
-          align: "right",
-        })
-        .text(formatCurrency(line.amount), columns.amount.x, rowTop, {
-          width: columns.amount.width,
+        .fillColor(COLORS.muted)
+        .text(String(line.quantity), 360, y + 8, { width: 36, align: "right" })
+        .text(formatCurrency(line.unitPrice), 420, y + 8, {
+          width: 54,
           align: "right",
         });
-      y += 32;
-    });
-
-    const totalTop = Math.max(y + 22, 420);
-    doc
-      .moveTo(354, totalTop - 8)
-      .lineTo(564, totalTop - 8)
-      .strokeColor("#e7e2dd")
-      .stroke();
-    [
-      ["Subtotal", toNumber(invoice.subtotal)],
-      ["Tax", toNumber(invoice.tax)],
-      ["Total", toNumber(invoice.total)],
-    ].forEach(([label, value], index) => {
-      const rowY = totalTop + index * 24;
       doc
-        .font(index === 2 ? "VSBold" : "VSRegular")
-        .fontSize(index === 2 ? 12 : 10)
-        .fillColor(index === 2 ? "#141414" : "#6f6660")
-        .text(String(label), 390, rowY)
-        .fillColor("#141414")
-        .text(formatCurrency(Number(value)), 486, rowY, {
+        .fillColor(COLORS.ink)
+        .text(formatCurrency(line.amount), 504, y + 8, {
           width: 60,
           align: "right",
         });
+      y += 30;
     });
+    hairline(y + 2);
 
-    const paymentY = Math.max(totalTop + 88, 500);
-    doc
-      .font("VSBold")
-      .fontSize(9)
-      .fillColor("#6f6660")
-      .text("HOW TO PAY", tableLeft, paymentY, { lineBreak: false });
-
-    paymentInstructions.forEach((instruction, index) => {
-      const columnWidth = 138;
-      const columnX = tableLeft + index * 148;
-      const rowY = paymentY + 22;
+    // Totals
+    const totalsTop = y + 20;
+    const tax = toNumber(invoice.tax);
+    const taxLabel = tax > 0 ? "Tax (NJ 6.625%)" : "Tax";
+    [
+      ["Subtotal", formatCurrency(toNumber(invoice.subtotal))],
+      [taxLabel, formatCurrency(tax)],
+    ].forEach(([label, value], index) => {
       doc
-        .font("VSBold")
-        .fontSize(10)
-        .fillColor("#141414")
-        .text(instruction.label, columnX, rowY, {
-          width: columnWidth,
+        .fontSize(7.5)
+        .fillColor(COLORS.muted)
+        .text(label, 414, totalsTop + index * 16);
+      doc
+        .fillColor(COLORS.ink)
+        .text(value, 504, totalsTop + index * 16, { width: 60, align: "right" });
+    });
+    doc
+      .moveTo(414, totalsTop + 38)
+      .lineTo(564, totalsTop + 38)
+      .lineWidth(1.2)
+      .strokeColor(COLORS.ink)
+      .stroke();
+    doc.lineWidth(1);
+    doc
+      .fontSize(9.5)
+      .fillColor(COLORS.ink)
+      .text("Total", 414, totalsTop + 46)
+      .text(formatCurrency(toNumber(invoice.total)), 474, totalsTop + 46, {
+        width: 90,
+        align: "right",
+      });
+
+    // Payment instructions
+    const paymentY = Math.max(totalsTop + 110, 580);
+    strongRule(paymentY - 12);
+    doc
+      .fontSize(6)
+      .fillColor(COLORS.faint)
+      .text("PAYMENT", 48, paymentY, { characterSpacing: 1.5 });
+    paymentInstructions.forEach((instruction, index) => {
+      const columnX = 48 + index * 140;
+      doc
+        .fontSize(8)
+        .fillColor(COLORS.ink)
+        .text(instruction.label, columnX, paymentY + 14, {
+          width: 130,
           lineBreak: false,
         });
       instruction.lines.forEach((line, lineIndex) => {
         doc
-          .font("VSRegular")
-          .fontSize(8.5)
-          .fillColor("#6f6660")
-          .text(line, columnX, rowY + 16 + lineIndex * 12, {
-            width: columnWidth,
+          .fontSize(7)
+          .fillColor(COLORS.muted)
+          .text(line, columnX, paymentY + 27 + lineIndex * 10, {
+            width: 130,
             lineBreak: false,
           });
       });
     });
-
-    doc.image(venmoQrImage, 494, paymentY + 4, { fit: [70, 70] });
+    doc.image(venmoQrImage, 506, paymentY + 4, { fit: [54, 54] });
     doc
-      .font("VSRegular")
       .fontSize(7)
-      .fillColor("#6f6660")
-      .text("Scan to pay with Venmo", 484, paymentY + 78, {
-        width: 90,
-        align: "center",
+      .fillColor(COLORS.coral)
+      .text(buildPaymentMemoNote(invoice.invoice_number), 48, paymentY + 64, {
+        width: 420,
         lineBreak: false,
       });
 
     doc
-      .font("VSBold")
-      .fontSize(8.5)
-      .fillColor("#f57d4b")
-      .text(
-        buildPaymentMemoNote(invoice.invoice_number),
-        tableLeft,
-        paymentY + 92,
-        { width: 420, lineBreak: false },
-      );
-
-    doc
-      .rect(48, 700, 516, 6)
-      .fill("#f57d4b")
-      .font("VSRegular")
-      .fontSize(9)
-      .fillColor("#6f6660")
-      .text("Visual Square", 48, 718, { lineBreak: false })
-      .text("Thank you for your business.", 390, 718, {
-        width: 174,
-        align: "right",
+      .fontSize(7)
+      .fillColor(COLORS.faint)
+      .text("Visual Square — Thank you for your business.", 48, 724, {
         lineBreak: false,
       });
 
