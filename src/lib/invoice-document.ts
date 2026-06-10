@@ -2,7 +2,10 @@ import type { ClientRow, InvoiceItemRow, InvoiceRow } from "@/types/database";
 
 import { toNumber } from "./erp-calculations";
 import { formatCurrency, formatUsDate } from "./format";
-import { getInvoicePaymentLinks } from "./payment-links";
+import {
+  buildPaymentMemoNote,
+  getPaymentInstructions,
+} from "./payment-instructions";
 
 export type InvoiceDocument = InvoiceRow & {
   clients?: Pick<ClientRow, "company_name" | "name" | "email" | "address"> | null;
@@ -47,40 +50,34 @@ function escapeHtml(value: string) {
     .replace(/"/g, "&quot;");
 }
 
-type InvoiceRenderOptions = {
-  paymentBaseUrl?: string;
-};
-
-export function buildInvoiceEmailHtml(
-  invoice: InvoiceDocument,
-  options: InvoiceRenderOptions = {},
-) {
+export function buildInvoiceEmailHtml(invoice: InvoiceDocument) {
   const recipient = getInvoiceRecipient(invoice);
   const invoiceNumber = escapeHtml(invoice.invoice_number);
   const clientName = escapeHtml(recipient.name);
   const projectName = escapeHtml(invoice.projects?.name ?? "Project");
   const total = formatCurrency(toNumber(invoice.total));
   const dueDate = formatUsDate(invoice.due_date);
-  const paymentLinks = getInvoicePaymentLinks({
-    invoiceId: invoice.id,
-    baseUrl: options.paymentBaseUrl,
-  });
-  const paymentHtml =
-    paymentLinks.length > 0
-      ? `<div style="margin:0 0 24px;">
-          <p style="margin:0 0 10px;color:#6f6660;font-size:12px;letter-spacing:0.12em;text-transform:uppercase;">Payment options</p>
-          <div style="display:block;">
-            ${paymentLinks
+  const instructions = getPaymentInstructions();
+  const paymentHtml = `<div style="margin:0 0 24px;">
+          <p style="margin:0 0 10px;color:#6f6660;font-size:12px;letter-spacing:0.12em;text-transform:uppercase;">How to pay</p>
+          <div style="border:1px solid #e7e2dd;">
+            ${instructions
               .map(
-                (link) => `
-                  <a href="${escapeHtml(link.href)}" style="display:inline-block;margin:0 8px 8px 0;border:1px solid #e7e2dd;padding:10px 14px;color:#141414;text-decoration:none;font-weight:700;">
-                    ${escapeHtml(link.label)}
-                  </a>`,
+                (instruction, index) => `
+                  <div style="padding:12px 16px;${index < instructions.length - 1 ? "border-bottom:1px solid #e7e2dd;" : ""}">
+                    <p style="margin:0;font-weight:700;color:#141414;">${escapeHtml(instruction.label)}</p>
+                    ${instruction.lines
+                      .map(
+                        (line) =>
+                          `<p style="margin:2px 0 0;color:#6f6660;font-size:13px;line-height:1.5;">${escapeHtml(line)}</p>`,
+                      )
+                      .join("")}
+                  </div>`,
               )
               .join("")}
           </div>
-        </div>`
-      : "";
+          <p style="margin:10px 0 0;color:#f57d4b;font-size:12px;font-weight:700;">${escapeHtml(buildPaymentMemoNote(invoice.invoice_number))}</p>
+        </div>`;
 
   return `<!doctype html>
 <html>
@@ -115,15 +112,9 @@ export function buildInvoiceEmailHtml(
 </html>`;
 }
 
-export function buildInvoiceEmailText(
-  invoice: InvoiceDocument,
-  options: InvoiceRenderOptions = {},
-) {
+export function buildInvoiceEmailText(invoice: InvoiceDocument) {
   const recipient = getInvoiceRecipient(invoice);
-  const paymentLinks = getInvoicePaymentLinks({
-    invoiceId: invoice.id,
-    baseUrl: options.paymentBaseUrl,
-  });
+  const instructions = getPaymentInstructions();
 
   return [
     `Hello ${recipient.name},`,
@@ -132,15 +123,12 @@ export function buildInvoiceEmailText(
       toNumber(invoice.total),
     )}.`,
     `Due date: ${formatUsDate(invoice.due_date)}`,
-    ...(paymentLinks.length > 0
-      ? [
-          "",
-          "Payment options:",
-          ...paymentLinks.map(
-            (link) => `${link.label} (${link.method}): ${link.href}`,
-          ),
-        ]
-      : []),
+    "",
+    "How to pay:",
+    ...instructions.map(
+      (instruction) => `${instruction.label}: ${instruction.lines.join(", ")}`,
+    ),
+    buildPaymentMemoNote(invoice.invoice_number),
     "",
     "Thank you,",
     "Visual Square",

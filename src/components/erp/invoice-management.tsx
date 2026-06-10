@@ -4,7 +4,6 @@ import { useState } from "react";
 import Image from "next/image";
 import {
   Banknote,
-  ExternalLink,
   Eye,
   FileSearch,
   Pencil,
@@ -33,7 +32,10 @@ import {
   buildInvoiceItemsFromPurchaseOrder,
   type InvoiceLineDraft,
 } from "@/lib/invoice-po-items";
-import { getInvoicePaymentLinks } from "@/lib/payment-links";
+import {
+  buildPaymentMemoNote,
+  getPaymentInstructions,
+} from "@/lib/payment-instructions";
 import { NJ_SALES_TAX_RATE_INPUT } from "@/lib/sales-tax";
 import type {
   BankAccountRow,
@@ -45,6 +47,7 @@ import type {
 } from "@/types/database";
 
 import logo from "../../../assets/vs-logo-transparent.png";
+import venmoQr from "../../../assets/venmo-qr.png";
 
 type InvoiceWithItems = InvoiceRow & {
   invoice_items: InvoiceItemRow[];
@@ -864,7 +867,7 @@ function InvoicePreviewModal({
   const [error, setError] = useState<string | null>(null);
   const recipient = getInvoiceRecipient(invoice);
   const lineItems = buildInvoiceLineItems(invoice);
-  const paymentLinks = getInvoicePaymentLinks({ invoiceId: invoice.id });
+  const paymentInstructions = getPaymentInstructions();
   const canSend = Boolean(recipient.email);
 
   async function sendInvoice() {
@@ -1044,35 +1047,39 @@ function InvoicePreviewModal({
               </div>
 
               <footer className="mt-10 border-t border-[var(--border)] pt-5 text-sm text-[var(--muted)]">
-                {paymentLinks.length > 0 ? (
-                  <div className="mb-8">
-                    <p className="ui-label text-[var(--coral)]">
-                      Payment Options
-                    </p>
-                    <div className="mt-3 grid gap-2 sm:grid-cols-3">
-                      {paymentLinks.map((link) => (
-                        <a
-                          key={link.key}
-                          href={link.href}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="group border border-[var(--border)] bg-white px-3 py-3 text-[var(--foreground)] transition-colors hover:border-[var(--coral)] hover:bg-[var(--coral-quiet)]"
-                        >
-                          <span className="flex items-center justify-between gap-2 text-sm font-semibold">
-                            {link.label}
-                            <ExternalLink
-                              className="h-3.5 w-3.5 text-[var(--muted)] group-hover:text-[var(--coral)]"
-                              aria-hidden="true"
-                            />
+                <div className="mb-8">
+                  <p className="ui-label text-[var(--coral)]">How to Pay</p>
+                  <div className="mt-3 grid gap-2 sm:grid-cols-[1fr_1fr_1fr_auto]">
+                    {paymentInstructions.map((instruction) => (
+                      <div
+                        key={instruction.key}
+                        className="border border-[var(--border)] bg-white px-3 py-3"
+                      >
+                        <span className="block text-sm font-semibold text-[var(--foreground)]">
+                          {instruction.label}
+                        </span>
+                        {instruction.lines.map((line) => (
+                          <span
+                            key={line}
+                            className="mt-1 block text-xs text-[var(--muted)]"
+                          >
+                            {line}
                           </span>
-                          <span className="mt-1 block text-xs text-[var(--muted)]">
-                            {link.method}
-                          </span>
-                        </a>
-                      ))}
+                        ))}
+                      </div>
+                    ))}
+                    <div className="flex items-center justify-center border border-[var(--border)] bg-white p-2">
+                      <Image
+                        src={venmoQr}
+                        alt="Venmo QR code"
+                        className="h-20 w-20 object-contain"
+                      />
                     </div>
                   </div>
-                ) : null}
+                  <p className="mt-2 text-xs font-semibold text-[var(--coral-strong)]">
+                    {buildPaymentMemoNote(invoice.invoice_number)}
+                  </p>
+                </div>
                 Thank you for your business.
               </footer>
             </div>

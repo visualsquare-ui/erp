@@ -9,16 +9,12 @@ import {
   getInvoiceRecipient,
   type InvoiceDocument,
 } from "./invoice-document";
-import { getInvoicePaymentLinks } from "./payment-links";
+import {
+  buildPaymentMemoNote,
+  getPaymentInstructions,
+} from "./payment-instructions";
 
-type InvoicePdfOptions = {
-  paymentBaseUrl?: string;
-};
-
-export async function buildInvoicePdf(
-  invoice: InvoiceDocument,
-  options: InvoicePdfOptions = {},
-) {
+export async function buildInvoicePdf(invoice: InvoiceDocument) {
   return new Promise<Buffer>((resolve, reject) => {
     const chunks: Buffer[] = [];
     const doc = new PDFDocument({
@@ -32,12 +28,11 @@ export async function buildInvoicePdf(
     });
     const recipient = getInvoiceRecipient(invoice);
     const lines = buildInvoiceLineItems(invoice);
-    const paymentLinks = getInvoicePaymentLinks({
-      invoiceId: invoice.id,
-      baseUrl: options.paymentBaseUrl,
-    });
+    const paymentInstructions = getPaymentInstructions();
     const logoPath = path.join(process.cwd(), "assets", "vs-logo-transparent.png");
     const logoImage = fs.readFileSync(logoPath);
+    const venmoQrPath = path.join(process.cwd(), "assets", "venmo-qr.png");
+    const venmoQrImage = fs.readFileSync(venmoQrPath);
     const fontPath = path.join(
       process.cwd(),
       "node_modules",
@@ -189,35 +184,57 @@ export async function buildInvoicePdf(
     });
 
     const paymentY = Math.max(totalTop + 88, 500);
-    if (paymentLinks.length > 0) {
+    doc
+      .font("VSBold")
+      .fontSize(9)
+      .fillColor("#6f6660")
+      .text("HOW TO PAY", tableLeft, paymentY, { lineBreak: false });
+
+    paymentInstructions.forEach((instruction, index) => {
+      const columnWidth = 138;
+      const columnX = tableLeft + index * 148;
+      const rowY = paymentY + 22;
       doc
         .font("VSBold")
-        .fontSize(9)
-        .fillColor("#6f6660")
-        .text("PAYMENT OPTIONS", tableLeft, paymentY, { lineBreak: false });
-
-      paymentLinks.forEach((link, index) => {
-        const columnWidth = 158;
-        const columnX = tableLeft + index * 174;
-        const rowY = paymentY + 22;
+        .fontSize(10)
+        .fillColor("#141414")
+        .text(instruction.label, columnX, rowY, {
+          width: columnWidth,
+          lineBreak: false,
+        });
+      instruction.lines.forEach((line, lineIndex) => {
         doc
-          .font("VSBold")
-          .fontSize(10)
-          .fillColor("#141414")
-          .text(link.label, columnX, rowY, {
-            width: columnWidth,
-            link: link.href,
-            underline: true,
-            lineBreak: false,
-          })
           .font("VSRegular")
+          .fontSize(8.5)
           .fillColor("#6f6660")
-          .text(link.method, columnX, rowY + 15, {
+          .text(line, columnX, rowY + 16 + lineIndex * 12, {
             width: columnWidth,
             lineBreak: false,
           });
       });
-    }
+    });
+
+    doc.image(venmoQrImage, 494, paymentY + 4, { fit: [70, 70] });
+    doc
+      .font("VSRegular")
+      .fontSize(7)
+      .fillColor("#6f6660")
+      .text("Scan to pay with Venmo", 484, paymentY + 78, {
+        width: 90,
+        align: "center",
+        lineBreak: false,
+      });
+
+    doc
+      .font("VSBold")
+      .fontSize(8.5)
+      .fillColor("#f57d4b")
+      .text(
+        buildPaymentMemoNote(invoice.invoice_number),
+        tableLeft,
+        paymentY + 92,
+        { width: 420, lineBreak: false },
+      );
 
     doc
       .rect(48, 700, 516, 6)

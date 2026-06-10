@@ -77,15 +77,16 @@ describe("invoice document helpers", () => {
     expect(html).toContain("#f57d4b");
   });
 
-  it("includes an invoice-specific payment link in the email body", () => {
-    const html = buildInvoiceEmailHtml(invoice, {
-      paymentBaseUrl: "https://erp.visualsquare.com",
-    });
+  it("includes fee-free payment instructions in the email body", () => {
+    const html = buildInvoiceEmailHtml(invoice);
 
-    expect(html).toContain("Payment options");
-    expect(html).toContain("Credit Card");
+    expect(html).toContain("How to pay");
+    expect(html).toContain("visualsquare@gmail.com");
+    expect(html).toContain("Visual Square LLC");
+    expect(html).toContain("@visualsquare_ny");
+    expect(html).not.toContain("Credit Card");
     expect(html).toContain(
-      "https://erp.visualsquare.com/api/invoices/invoice-1/pay",
+      "Please include invoice number VS-2026-0001 in the payment memo.",
     );
   });
 });
