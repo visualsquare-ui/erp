@@ -17,7 +17,6 @@ import {
 const COLORS = {
   ink: "#141414",
   muted: "#6f6660",
-  faint: "#9a928c",
   line: "#e7e2dd",
   coral: "#f57d4b",
 };
@@ -81,31 +80,31 @@ export async function buildInvoicePdf(invoice: InvoiceDocument) {
     }
 
     // Header: logo + invoice identity
-    doc.image(logoImage, 48, 38, { fit: [58, 58] });
+    doc.image(logoImage, 48, 32, { fit: [87, 87] });
     doc
       .fontSize(9.5)
       .fillColor(COLORS.ink)
-      .text(`Invoice ${invoice.invoice_number}`, 348, 50, {
+      .text(`Invoice ${invoice.invoice_number}`, 348, 56, {
         align: "right",
         width: 216,
       })
       .fontSize(7)
       .fillColor(COLORS.muted)
-      .text("Visual Square LLC · Palisades Park, NJ", 348, 65, {
+      .text("Visual Square LLC · Palisades Park, NJ", 348, 71, {
         align: "right",
         width: 216,
       });
 
-    strongRule(112);
+    strongRule(128);
 
     // Meta grid: billed to / project / dates / total due
     doc
       .fontSize(6)
-      .fillColor(COLORS.faint)
-      .text("BILLED TO", 48, 128, { characterSpacing: 1.5 })
-      .text("PROJECT", 178, 128, { characterSpacing: 1.5 })
-      .text("DATES", 308, 128, { characterSpacing: 1.5 })
-      .text("TOTAL DUE", 444, 128, {
+      .fillColor(COLORS.muted)
+      .text("BILLED TO", 48, 144, { characterSpacing: 1.5 })
+      .text("PROJECT", 178, 144, { characterSpacing: 1.5 })
+      .text("DATES", 308, 144, { characterSpacing: 1.5 })
+      .text("TOTAL DUE", 444, 144, {
         characterSpacing: 1.5,
         width: 120,
         align: "right",
@@ -114,11 +113,11 @@ export async function buildInvoicePdf(invoice: InvoiceDocument) {
     doc
       .fontSize(8.5)
       .fillColor(COLORS.ink)
-      .text(recipient.name, 48, 142, { width: 122 });
+      .text(recipient.name, 48, 158, { width: 122 });
     doc
       .fontSize(7.5)
       .fillColor(COLORS.muted)
-      .text(recipient.address || recipient.email || "-", 48, 154, {
+      .text(recipient.address || recipient.email || "-", 48, 170, {
         width: 122,
         lineGap: 1.5,
       });
@@ -126,30 +125,30 @@ export async function buildInvoicePdf(invoice: InvoiceDocument) {
     doc
       .fontSize(8.5)
       .fillColor(COLORS.ink)
-      .text(invoice.projects?.name ?? "-", 178, 142, { width: 122 });
+      .text(invoice.projects?.name ?? "-", 178, 158, { width: 122 });
 
     doc
       .fontSize(8.5)
       .fillColor(COLORS.ink)
-      .text(`Issued ${formatUsDate(invoice.issue_date)}`, 308, 142, {
+      .text(`Issued ${formatUsDate(invoice.issue_date)}`, 308, 158, {
         width: 128,
       })
       .fontSize(7.5)
       .fillColor(COLORS.muted)
-      .text(`Due ${formatUsDate(invoice.due_date)}`, 308, 154, { width: 128 });
+      .text(`Due ${formatUsDate(invoice.due_date)}`, 308, 170, { width: 128 });
 
     doc
       .fontSize(14)
       .fillColor(COLORS.coral)
-      .text(formatCurrency(toNumber(invoice.total)), 414, 140, {
+      .text(formatCurrency(toNumber(invoice.total)), 414, 156, {
         width: 150,
         align: "right",
       });
 
     // Line items
-    let y = 226;
+    let y = 242;
     strongRule(y - 14);
-    doc.fontSize(6).fillColor(COLORS.faint);
+    doc.fontSize(6).fillColor(COLORS.muted);
     doc.text("DESCRIPTION", 48, y - 6, { characterSpacing: 1.5 });
     doc.text("QTY", 360, y - 6, {
       width: 36,
@@ -228,7 +227,7 @@ export async function buildInvoicePdf(invoice: InvoiceDocument) {
     strongRule(paymentY - 12);
     doc
       .fontSize(6)
-      .fillColor(COLORS.faint)
+      .fillColor(COLORS.muted)
       .text("PAYMENT", 48, paymentY, { characterSpacing: 1.5 });
     paymentInstructions.forEach((instruction, index) => {
       const columnX = 48 + index * 140;
@@ -260,7 +259,7 @@ export async function buildInvoicePdf(invoice: InvoiceDocument) {
 
     doc
       .fontSize(7)
-      .fillColor(COLORS.faint)
+      .fillColor(COLORS.muted)
       .text("Visual Square — Thank you for your business.", 48, 724, {
         lineBreak: false,
       });
