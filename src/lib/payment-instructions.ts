@@ -21,7 +21,7 @@ export function getPaymentInstructions(): PaymentInstruction[] {
       label: "Check",
       lines: [
         'Payable to "Visual Square LLC"',
-        "260 Broad Avenue 506",
+        "260 Broad Ave #121",
         "Palisades Park, NJ 07650",
       ],
     },
