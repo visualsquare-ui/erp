@@ -50,64 +50,98 @@ function escapeHtml(value: string) {
     .replace(/"/g, "&quot;");
 }
 
+const VS_LOGO_URL = "https://erp.visualsquare.com/logo.png";
+
 export function buildInvoiceEmailHtml(invoice: InvoiceDocument) {
   const recipient = getInvoiceRecipient(invoice);
   const invoiceNumber = escapeHtml(invoice.invoice_number);
   const clientName = escapeHtml(recipient.name);
-  const projectName = escapeHtml(invoice.projects?.name ?? "Project");
   const total = formatCurrency(toNumber(invoice.total));
   const dueDate = formatUsDate(invoice.due_date);
   const instructions = getPaymentInstructions();
-  const paymentHtml = `<div style="margin:0 0 24px;">
-          <p style="margin:0 0 10px;color:#6f6660;font-size:12px;letter-spacing:0.12em;text-transform:uppercase;">How to pay</p>
-          <div style="border:1px solid #e7e2dd;">
-            ${instructions
+  const memo = escapeHtml(buildPaymentMemoNote(invoice.invoice_number));
+
+  const paymentRows = instructions
+    .map(
+      (instruction, index) => `
+        <tr>
+          <td style="padding:12px 16px;${index < instructions.length - 1 ? "border-bottom:1px solid #e7e2dd;" : ""}">
+            <p style="margin:0;font-weight:700;font-size:14px;color:#141414;">${escapeHtml(instruction.label)}</p>
+            ${instruction.lines
               .map(
-                (instruction, index) => `
-                  <div style="padding:12px 16px;${index < instructions.length - 1 ? "border-bottom:1px solid #e7e2dd;" : ""}">
-                    <p style="margin:0;font-weight:700;color:#141414;">${escapeHtml(instruction.label)}</p>
-                    ${instruction.lines
-                      .map(
-                        (line) =>
-                          `<p style="margin:2px 0 0;color:#6f6660;font-size:13px;line-height:1.5;">${escapeHtml(line)}</p>`,
-                      )
-                      .join("")}
-                  </div>`,
+                (line) =>
+                  `<p style="margin:3px 0 0;color:#6f6660;font-size:13px;line-height:1.5;">${escapeHtml(line)}</p>`,
               )
               .join("")}
-          </div>
-          <p style="margin:10px 0 0;color:#f57d4b;font-size:12px;font-weight:700;">${escapeHtml(buildPaymentMemoNote(invoice.invoice_number))}</p>
-        </div>`;
+          </td>
+        </tr>`,
+    )
+    .join("");
 
   return `<!doctype html>
-<html>
-  <body style="margin:0;background:#fbf6f3;color:#141414;font-family:Inter,Arial,sans-serif;">
-    <div style="padding:32px 20px;">
-      <div style="max-width:640px;margin:0 auto;background:#ffffff;border:1px solid #e7e2dd;">
-        <div style="padding:28px 32px;border-bottom:1px solid #e7e2dd;">
-          <div style="font-family:Georgia,serif;font-size:30px;line-height:0.9;color:#141414;">visual<br><span style="color:#f57d4b;">square</span></div>
-          <p style="margin:28px 0 0;color:#6f6660;font-size:12px;letter-spacing:0.12em;text-transform:uppercase;">Invoice</p>
-          <h1 style="margin:8px 0 0;font-size:28px;line-height:1.2;">${invoiceNumber}</h1>
-        </div>
-        <div style="padding:28px 32px;">
-          <p style="margin:0 0 16px;font-size:16px;">Hello ${clientName},</p>
-          <p style="margin:0 0 24px;color:#6f6660;line-height:1.6;">Attached is the invoice for ${projectName}. Please review it at your convenience.</p>
-          <div style="border:1px solid #e7e2dd;padding:18px 20px;margin-bottom:24px;">
-            <div style="display:flex;justify-content:space-between;gap:20px;margin-bottom:10px;">
-              <span style="color:#6f6660;">Total</span>
-              <strong style="font-size:22px;">${total}</strong>
-            </div>
-            <div style="display:flex;justify-content:space-between;gap:20px;">
-              <span style="color:#6f6660;">Due date</span>
-              <strong>${dueDate}</strong>
-            </div>
-          </div>
-          ${paymentHtml}
-          <p style="margin:0;color:#6f6660;line-height:1.6;">Thank you,<br>Visual Square</p>
-        </div>
-        <div style="height:6px;background:#f57d4b;"></div>
-      </div>
-    </div>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Invoice ${invoiceNumber} from Visual Square</title>
+  </head>
+  <body style="margin:0;padding:0;background:#fbf6f3;color:#141414;font-family:'Helvetica Neue',Arial,sans-serif;-webkit-font-smoothing:antialiased;">
+    <div style="display:none;max-height:0;overflow:hidden;opacity:0;">Invoice ${invoiceNumber} — Total ${total}, due ${dueDate}.</div>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#fbf6f3;">
+      <tr>
+        <td align="center" style="padding:32px 16px;">
+          <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="width:600px;max-width:100%;background:#ffffff;border:1px solid #e7e2dd;">
+            <tr>
+              <td style="padding:32px 36px 24px;border-bottom:1px solid #e7e2dd;">
+                <img src="${VS_LOGO_URL}" alt="Visual Square" width="168" style="display:block;width:168px;max-width:60%;height:auto;border:0;" />
+                <p style="margin:24px 0 0;color:#9a928c;font-size:11px;letter-spacing:0.16em;text-transform:uppercase;">Invoice</p>
+                <h1 style="margin:6px 0 0;font-size:26px;line-height:1.2;font-weight:700;color:#141414;">${invoiceNumber}</h1>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:28px 36px 8px;">
+                <p style="margin:0 0 16px;font-size:16px;color:#141414;">Hi ${clientName},</p>
+                <p style="margin:0 0 24px;color:#6f6660;font-size:15px;line-height:1.65;">Thank you for working with Visual Square. Your invoice is ready and attached to this email as a PDF. A summary is below for your convenience.</p>
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e7e2dd;margin-bottom:28px;">
+                  <tr>
+                    <td style="padding:16px 20px;border-bottom:1px solid #e7e2dd;">
+                      <span style="color:#6f6660;font-size:14px;">Amount due</span>
+                    </td>
+                    <td align="right" style="padding:16px 20px;border-bottom:1px solid #e7e2dd;">
+                      <strong style="font-size:22px;color:#141414;">${total}</strong>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding:14px 20px;">
+                      <span style="color:#6f6660;font-size:14px;">Due date</span>
+                    </td>
+                    <td align="right" style="padding:14px 20px;">
+                      <strong style="font-size:15px;color:#141414;">${dueDate}</strong>
+                    </td>
+                  </tr>
+                </table>
+                <p style="margin:0 0 10px;color:#9a928c;font-size:11px;letter-spacing:0.16em;text-transform:uppercase;">How to pay</p>
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e7e2dd;">
+                  ${paymentRows}
+                </table>
+                <p style="margin:12px 0 28px;color:#f57d4b;font-size:13px;font-weight:700;line-height:1.5;">${memo}</p>
+                <p style="margin:0 0 4px;color:#141414;font-size:15px;line-height:1.65;">If you have any questions about this invoice, just reply to this email — we're happy to help.</p>
+                <p style="margin:20px 0 0;color:#141414;font-size:15px;">Warm regards,</p>
+                <p style="margin:2px 0 0;color:#141414;font-size:15px;font-weight:700;">The Visual Square Team</p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:24px 36px;border-top:1px solid #e7e2dd;">
+                <p style="margin:0;color:#9a928c;font-size:12px;line-height:1.6;">Visual Square LLC · 260 Broad Ave #121, Palisades Park, NJ 07650<br/>Design &amp; print for local businesses</p>
+              </td>
+            </tr>
+            <tr>
+              <td style="height:5px;background:#f57d4b;font-size:0;line-height:0;">&nbsp;</td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
   </body>
 </html>`;
 }
@@ -117,20 +151,26 @@ export function buildInvoiceEmailText(invoice: InvoiceDocument) {
   const instructions = getPaymentInstructions();
 
   return [
-    `Hello ${recipient.name},`,
+    `Hi ${recipient.name},`,
     "",
-    `Attached is invoice ${invoice.invoice_number} for ${formatCurrency(
-      toNumber(invoice.total),
-    )}.`,
+    "Thank you for working with Visual Square. Your invoice is ready and",
+    "attached to this email as a PDF. Here is a quick summary:",
+    "",
+    `Invoice: ${invoice.invoice_number}`,
+    `Amount due: ${formatCurrency(toNumber(invoice.total))}`,
     `Due date: ${formatUsDate(invoice.due_date)}`,
     "",
     "How to pay:",
     ...instructions.map(
-      (instruction) => `${instruction.label}: ${instruction.lines.join(", ")}`,
+      (instruction) => `  ${instruction.label}: ${instruction.lines.join(", ")}`,
     ),
+    "",
     buildPaymentMemoNote(invoice.invoice_number),
     "",
-    "Thank you,",
-    "Visual Square",
+    "If you have any questions about this invoice, just reply to this email.",
+    "",
+    "Warm regards,",
+    "The Visual Square Team",
+    "Visual Square LLC · 260 Broad Ave #121, Palisades Park, NJ 07650",
   ].join("\n");
 }

@@ -75,6 +75,8 @@ describe("invoice document helpers", () => {
     expect(html).toContain("101 Chicken");
     expect(html).toContain("$106.63");
     expect(html).toContain("#f57d4b");
+    expect(html).toContain("logo.png");
+    expect(html).toContain('alt="Visual Square"');
   });
 
   it("includes fee-free payment instructions in the email body", () => {

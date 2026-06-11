@@ -957,6 +957,24 @@ function InvoicePreviewModal({
           </div>
         </div>
       ) : null}
+      {error ? (
+        <div className="fixed inset-0 z-10 flex items-center justify-center bg-black/40 px-4">
+          <div className="w-full max-w-md border border-[var(--border)] bg-white p-6 text-center shadow-xl">
+            <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-[#F8E8E8]">
+              <X className="h-5 w-5 text-[#8a2f1e]" aria-hidden="true" />
+            </div>
+            <h3 className="mt-4 text-base font-semibold">발송에 실패했습니다</h3>
+            <p className="mt-2 break-words text-sm text-[var(--muted)]">{error}</p>
+            <button
+              type="button"
+              className="ui-button ui-button-secondary mt-5 w-full"
+              onClick={() => setError(null)}
+            >
+              확인
+            </button>
+          </div>
+        </div>
+      ) : null}
       <div className="mx-auto max-w-4xl border border-[var(--border)] bg-white shadow-xl">
         <div className="flex items-center justify-between gap-3 border-b border-[var(--border)] px-5 py-3">
           <div>
@@ -1166,11 +1184,6 @@ function InvoicePreviewModal({
               <p className="border border-[#c8e2d2] bg-[#f2faf5] px-3 py-2 text-[#256340]">
                 이미 발송된 인보이스입니다. &quot;Remind&quot;를 누르면 같은 주소로
                 다시 보내 결제를 독촉할 수 있습니다.
-              </p>
-            ) : null}
-            {error ? (
-              <p className="border border-[#d8c2bd] bg-[#fff4f1] px-3 py-2 text-[#8a2f1e]">
-                {error}
               </p>
             ) : null}
           </div>
