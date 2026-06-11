@@ -20,7 +20,7 @@ const toneByStatus: Record<ProjectStatus | InvoiceStatus, string> = {
   on_hold: "border-[var(--warning)]/30 bg-[#FFF7DE] text-[var(--warning)]",
   canceled: "border-[#8A1F1F]/25 bg-[#F8E8E8] text-[#8A1F1F]",
   draft: "border-[var(--border)] bg-white text-[var(--muted)]",
-  sent: "border-[var(--info)]/30 bg-[#EDF5FA] text-[var(--info)]",
+  sent: "border-[var(--success)]/30 bg-[#E9F6EF] text-[var(--success)]",
   paid: "border-[var(--success)]/25 bg-[#E9F6EF] text-[var(--success)]",
   overdue: "border-[#8A1F1F]/25 bg-[#F8E8E8] text-[#8A1F1F]",
 };

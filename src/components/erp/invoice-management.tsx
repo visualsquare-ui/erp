@@ -5,6 +5,7 @@ import Image from "next/image";
 import {
   Banknote,
   BellRing,
+  Check,
   Eye,
   FileSearch,
   Pencil,
@@ -980,19 +981,35 @@ function InvoicePreviewModal({
               <X className="h-4 w-4" aria-hidden="true" />
               닫기
             </button>
-            <button
-              type="button"
-              className="ui-button h-9 px-3"
-              disabled={!canSend || isSending}
-              onClick={() => void sendInvoice()}
-            >
-              <Send className="h-4 w-4" aria-hidden="true" />
-              {isSending
-                ? "Sending"
-                : alreadySent
-                  ? "Remind"
-                  : "Send"}
-            </button>
+            {alreadySent ? (
+              <>
+                <span className="inline-flex h-9 items-center gap-1.5 whitespace-nowrap border border-[var(--success)]/30 bg-[#E9F6EF] px-3 text-sm font-semibold text-[var(--success)]">
+                  <Check className="h-4 w-4" aria-hidden="true" />
+                  Sent
+                </span>
+                {invoice.status !== "paid" ? (
+                  <button
+                    type="button"
+                    className="ui-button h-9 px-3"
+                    disabled={!canSend || isSending}
+                    onClick={() => void sendInvoice()}
+                  >
+                    <BellRing className="h-4 w-4" aria-hidden="true" />
+                    {isSending ? "Sending" : "Remind"}
+                  </button>
+                ) : null}
+              </>
+            ) : (
+              <button
+                type="button"
+                className="ui-button h-9 px-3"
+                disabled={!canSend || isSending}
+                onClick={() => void sendInvoice()}
+              >
+                <Send className="h-4 w-4" aria-hidden="true" />
+                {isSending ? "Sending" : "Send"}
+              </button>
+            )}
           </div>
         </div>
 

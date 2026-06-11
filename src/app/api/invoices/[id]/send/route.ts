@@ -1,3 +1,4 @@
+import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 
 import { createClient } from "@/lib/supabase/server";
@@ -84,7 +85,23 @@ export async function POST(
   }
 
   const supabase = await createClient();
-  await supabase.from("invoices").update({ status: "sent" }).eq("id", id);
+  const { error: updateError } = await supabase
+    .from("invoices")
+    .update({ status: "sent" })
+    .eq("id", id)
+    .neq("status", "paid");
+
+  if (updateError) {
+    return NextResponse.json(
+      {
+        error: `이메일은 발송됐지만 상태를 '발송'으로 바꾸지 못했습니다: ${updateError.message}`,
+      },
+      { status: 500 },
+    );
+  }
+
+  revalidatePath("/invoices");
+  revalidatePath("/");
 
   return NextResponse.json({
     ok: true,
