@@ -93,7 +93,7 @@ export function buildInvoiceEmailHtml(invoice: InvoiceDocument) {
           <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="width:600px;max-width:100%;background:#ffffff;border:1px solid #e7e2dd;">
             <tr>
               <td style="padding:32px 36px 24px;border-bottom:1px solid #e7e2dd;">
-                <img src="${VS_LOGO_URL}" alt="Visual Square" width="168" style="display:block;width:168px;max-width:60%;height:auto;border:0;" />
+                <img src="${VS_LOGO_URL}" alt="Visual Square" width="134" style="display:block;width:134px;max-width:50%;height:auto;border:0;" />
                 <p style="margin:24px 0 0;color:#9a928c;font-size:11px;letter-spacing:0.16em;text-transform:uppercase;">Invoice</p>
                 <h1 style="margin:6px 0 0;font-size:26px;line-height:1.2;font-weight:700;color:#141414;">${invoiceNumber}</h1>
               </td>
