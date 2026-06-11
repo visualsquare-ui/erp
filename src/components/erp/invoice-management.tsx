@@ -4,6 +4,7 @@ import { useState } from "react";
 import Image from "next/image";
 import {
   Banknote,
+  BellRing,
   Eye,
   FileSearch,
   Pencil,
@@ -217,6 +218,11 @@ export function InvoiceManagement({
               onRecordPayment={
                 invoice.status !== "paid" && accounts.length > 0
                   ? () => setRecordingInvoice(invoice)
+                  : undefined
+              }
+              onRemind={
+                invoice.status === "sent" || invoice.status === "overdue"
+                  ? () => setPreviewInvoice(invoice)
                   : undefined
               }
             />
@@ -668,12 +674,14 @@ function InvoiceRowCard({
   onEdit,
   onDelete,
   onRecordPayment,
+  onRemind,
 }: {
   invoice: InvoiceWithItems;
   onView: () => void;
   onEdit: () => void;
   onDelete: () => void;
   onRecordPayment?: () => void;
+  onRemind?: () => void;
 }) {
   return (
     <article className="grid gap-4 border-b border-[var(--border)] p-5 last:border-b-0 md:grid-cols-[minmax(0,1fr)_13rem]">
@@ -707,6 +715,14 @@ function InvoiceRowCard({
           </p>
         </div>
         <div className="flex justify-end gap-1 border-t border-[var(--border)] pt-2 md:w-full">
+          {onRemind ? (
+            <ListActionButton
+              icon={<BellRing className="h-3.5 w-3.5" aria-hidden="true" />}
+              onClick={onRemind}
+            >
+              Remind
+            </ListActionButton>
+          ) : null}
           {onRecordPayment ? (
             <ListActionButton
               icon={<Banknote className="h-3.5 w-3.5" aria-hidden="true" />}
@@ -863,16 +879,17 @@ function InvoicePreviewModal({
   onSent: () => void;
 }) {
   const [isSending, setIsSending] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
+  const [sentTo, setSentTo] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const recipient = getInvoiceRecipient(invoice);
   const lineItems = buildInvoiceLineItems(invoice);
   const paymentInstructions = getPaymentInstructions();
+  const alreadySent = invoice.status === "sent" || invoice.status === "overdue";
   const canSend = Boolean(recipient.email);
 
   async function sendInvoice() {
     setIsSending(true);
-    setMessage(null);
+    setSentTo(null);
     setError(null);
 
     try {
@@ -881,14 +898,14 @@ function InvoicePreviewModal({
       });
       const body = (await response.json().catch(() => ({}))) as {
         error?: string;
+        sentTo?: string;
       };
 
       if (!response.ok) {
         throw new Error(body.error ?? "Invoice 발송에 실패했습니다.");
       }
 
-      setMessage("Invoice PDF를 이메일로 발송했습니다.");
-      onSent();
+      setSentTo(body.sentTo ?? recipient.email);
     } catch (sendError) {
       setError(
         sendError instanceof Error
@@ -900,6 +917,12 @@ function InvoicePreviewModal({
     }
   }
 
+  function confirmSent() {
+    setSentTo(null);
+    onSent();
+    onClose();
+  }
+
   return (
     <div
       className="fixed inset-0 z-50 overflow-y-auto bg-black/35 px-4 py-6"
@@ -907,6 +930,32 @@ function InvoicePreviewModal({
       aria-modal="true"
       aria-label={`${invoice.invoice_number} preview`}
     >
+      {sentTo ? (
+        <div className="fixed inset-0 z-10 flex items-center justify-center bg-black/40 px-4">
+          <div className="w-full max-w-sm border border-[var(--border)] bg-white p-6 text-center shadow-xl">
+            <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-[#E9F6EF]">
+              <Send className="h-5 w-5 text-[var(--success)]" aria-hidden="true" />
+            </div>
+            <h3 className="mt-4 text-base font-semibold">인보이스를 발송했습니다</h3>
+            <p className="mt-2 text-sm text-[var(--muted)]">
+              <strong className="font-semibold text-[var(--foreground)]">
+                {invoice.invoice_number}
+              </strong>
+              {" PDF를 아래 주소로 보냈습니다."}
+            </p>
+            <p className="mt-1 break-all text-sm font-semibold text-[var(--coral-strong)]">
+              {sentTo}
+            </p>
+            <button
+              type="button"
+              className="ui-button mt-5 w-full"
+              onClick={confirmSent}
+            >
+              확인
+            </button>
+          </div>
+        </div>
+      ) : null}
       <div className="mx-auto max-w-4xl border border-[var(--border)] bg-white shadow-xl">
         <div className="flex items-center justify-between gap-3 border-b border-[var(--border)] px-5 py-3">
           <div>
@@ -938,7 +987,11 @@ function InvoicePreviewModal({
               onClick={() => void sendInvoice()}
             >
               <Send className="h-4 w-4" aria-hidden="true" />
-              {isSending ? "Sending" : "Send"}
+              {isSending
+                ? "Sending"
+                : alreadySent
+                  ? "Remind"
+                  : "Send"}
             </button>
           </div>
         </div>
@@ -1092,10 +1145,10 @@ function InvoicePreviewModal({
                 고객 이메일이 없어 발송할 수 없습니다. 고객 정보에 이메일을 먼저
                 입력해 주세요.
               </p>
-            ) : null}
-            {message ? (
-              <p className="border border-[#bed8ca] bg-[#f1fbf5] px-3 py-2 text-[#256340]">
-                {message}
+            ) : alreadySent ? (
+              <p className="border border-[#c8e2d2] bg-[#f2faf5] px-3 py-2 text-[#256340]">
+                이미 발송된 인보이스입니다. &quot;Remind&quot;를 누르면 같은 주소로
+                다시 보내 결제를 독촉할 수 있습니다.
               </p>
             ) : null}
             {error ? (

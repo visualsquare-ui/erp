@@ -86,5 +86,9 @@ export async function POST(
   const supabase = await createClient();
   await supabase.from("invoices").update({ status: "sent" }).eq("id", id);
 
-  return NextResponse.json({ ok: true, resendId: body.id ?? null });
+  return NextResponse.json({
+    ok: true,
+    resendId: body.id ?? null,
+    sentTo: recipient.email,
+  });
 }
