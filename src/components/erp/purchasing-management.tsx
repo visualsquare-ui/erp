@@ -1,20 +1,21 @@
 "use client";
 
 import { useState } from "react";
-import { Paperclip, Pencil, Plus, Trash2 } from "lucide-react";
+import { Banknote, Paperclip, Pencil, Plus, Trash2 } from "lucide-react";
 
 import {
   createPurchaseOrderAction,
+  createTransactionAction,
   createVendorBillAction,
   deletePurchaseOrderAction,
   deleteVendorBillAction,
   restorePurchaseOrderAction,
   updatePurchaseOrderAction,
   updateVendorBillAction,
-  updateVendorBillPaymentStatusAction,
 } from "@/app/(erp)/actions";
 import { EmptyState } from "@/components/erp/empty-state";
 import { ListActionButton } from "@/components/erp/list-action-button";
+import { expenseCategories, paymentMethods } from "@/lib/accounting";
 import {
   buildPurchaseOrderDisplayNumbers,
   buildVendorBillDisplayNumbers,
@@ -32,6 +33,7 @@ import {
   isVendorBillPaid,
 } from "@/lib/vendor-bill-status";
 import type {
+  BankAccountRow,
   ClientRow,
   JobRow,
   ProjectRow,
@@ -47,6 +49,7 @@ type PurchasingManagementProps = {
   projects: ProjectRow[];
   purchaseOrders: PurchaseOrderRow[];
   bills: VendorBillRow[];
+  accounts: BankAccountRow[];
   jobsSetupError?: string | null;
 };
 
@@ -169,6 +172,7 @@ export function PurchasingManagement({
   projects,
   purchaseOrders,
   bills,
+  accounts,
   jobsSetupError,
 }: PurchasingManagementProps) {
   const [poFormKey, setPoFormKey] = useState(0);
@@ -182,6 +186,7 @@ export function PurchasingManagement({
     null,
   );
   const [editingBill, setEditingBill] = useState<VendorBillRow | null>(null);
+  const [payingBill, setPayingBill] = useState<VendorBillRow | null>(null);
   const [deletedOrder, setDeletedOrder] = useState<PurchaseOrderRow | null>(
     null,
   );
@@ -251,17 +256,15 @@ export function PurchasingManagement({
     }
   }
 
-  async function updateBillPaymentStatus(bill: VendorBillRow) {
-    const nextStatus = isVendorBillPaid(bill.status) ? "received" : "paid";
-    const formData = new FormData();
-    formData.set("vendor_bill_id", bill.id);
-    formData.set("status", nextStatus);
+  function openBillPayment(bill: VendorBillRow) {
+    setPayingBill(bill);
+    setBillMode("closed");
+    setEditingBill(null);
+    closeOrderForm();
+  }
 
-    if (bill.project_id) {
-      formData.set("project_id", bill.project_id);
-    }
-
-    await updateVendorBillPaymentStatusAction(formData);
+  function closeBillPayment() {
+    setPayingBill(null);
   }
 
   return (
@@ -358,6 +361,7 @@ export function PurchasingManagement({
         onAdd={() => {
           setEditingBill(null);
           setBillMode("create");
+          closeBillPayment();
           closeOrderForm();
         }}
       >
@@ -372,6 +376,17 @@ export function PurchasingManagement({
             bill={editingBill ?? undefined}
             onCancel={closeBillForm}
             onSaved={closeBillForm}
+          />
+        ) : null}
+
+        {payingBill ? (
+          <RecordBillPaymentForm
+            key={`pay-${payingBill.id}`}
+            bill={payingBill}
+            billNumber={billDisplayNumbers.get(payingBill.id) ?? payingBill.bill_number ?? "Bill"}
+            accounts={accounts}
+            onCancel={closeBillPayment}
+            onSaved={closeBillPayment}
           />
         ) : null}
 
@@ -395,14 +410,15 @@ export function PurchasingManagement({
                 status={getVendorBillStatusLabel(bill.status)}
                 statusTone={getVendorBillStatusTone(bill.status)}
                 fileUrl={bill.file_url ?? undefined}
-                paymentToggle={{
-                  checked: isVendorBillPaid(bill.status),
-                  label: "Paid",
-                }}
-                onPaymentAction={() => void updateBillPaymentStatus(bill)}
+                onRecordPayment={
+                  !isVendorBillPaid(bill.status) && accounts.length > 0
+                    ? () => openBillPayment(bill)
+                    : undefined
+                }
                 onEdit={() => {
                   setEditingBill(bill);
                   setBillMode("edit");
+                  closeBillPayment();
                   closeOrderForm();
                 }}
                 onDelete={() => void deleteBill(bill)}
@@ -1103,8 +1119,7 @@ function DocumentRow({
   status,
   statusTone = "neutral",
   fileUrl,
-  paymentToggle,
-  onPaymentAction,
+  onRecordPayment,
   onEdit,
   onDelete,
 }: {
@@ -1114,11 +1129,7 @@ function DocumentRow({
   status: string;
   statusTone?: "neutral" | "warning" | "success";
   fileUrl?: string;
-  paymentToggle?: {
-    checked: boolean;
-    label: string;
-  };
-  onPaymentAction?: () => void;
+  onRecordPayment?: () => void;
   onEdit: () => void;
   onDelete: () => void;
 }) {
@@ -1154,36 +1165,13 @@ function DocumentRow({
       <div className="flex flex-wrap items-center justify-end gap-2 border-t border-[var(--border)] pt-2 lg:border-t-0 lg:pt-0">
         <strong className="min-w-24 text-right tabular-nums">{amount}</strong>
         <div className="flex flex-wrap items-center justify-end gap-1">
-          {paymentToggle && onPaymentAction ? (
-            <button
-              type="button"
-              role="switch"
-              aria-checked={paymentToggle.checked}
-              className={`inline-flex h-7 items-center gap-1.5 border px-2 text-xs font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--coral)] ${
-                paymentToggle.checked
-                  ? "border-[var(--success)]/25 bg-[#E9F6EF] text-[var(--success)]"
-                  : "border-[#e7c8a5] bg-[#fff7ed] text-[#8a4a0a]"
-              }`}
-              onClick={onPaymentAction}
+          {onRecordPayment ? (
+            <ListActionButton
+              icon={<Banknote className="h-3.5 w-3.5" aria-hidden="true" />}
+              onClick={onRecordPayment}
             >
-              <span
-                className={`h-3 w-5 border p-0.5 ${
-                  paymentToggle.checked
-                    ? "border-[var(--success)] bg-white"
-                    : "border-[#e7c8a5] bg-white"
-                }`}
-                aria-hidden="true"
-              >
-                <span
-                  className={`block h-1.5 w-1.5 transition-transform ${
-                    paymentToggle.checked
-                      ? "translate-x-2 bg-[var(--success)]"
-                      : "translate-x-0 bg-[#8a4a0a]"
-                  }`}
-                />
-              </span>
-              {paymentToggle.label}
-            </button>
+              지급
+            </ListActionButton>
           ) : null}
           <ListActionButton
             icon={<Pencil className="h-3.5 w-3.5" aria-hidden="true" />}
@@ -1201,6 +1189,118 @@ function DocumentRow({
         </div>
       </div>
     </article>
+  );
+}
+
+function RecordBillPaymentForm({
+  bill,
+  billNumber,
+  accounts,
+  onCancel,
+  onSaved,
+}: {
+  bill: VendorBillRow;
+  billNumber: string;
+  accounts: BankAccountRow[];
+  onCancel: () => void;
+  onSaved: () => void;
+}) {
+  const amount = toNumber(bill.amount);
+  const vendorName = bill.vendors?.name ?? "";
+
+  async function submit(formData: FormData) {
+    await createTransactionAction(formData);
+    onSaved();
+  }
+
+  return (
+    <form action={submit} className="ui-panel space-y-4">
+      <FormHeader title={`지급 기록 · ${billNumber}`} onCancel={onCancel} />
+
+      <input type="hidden" name="type" value="vendor_payment" />
+      <input type="hidden" name="vendor_bill_id" value={bill.id} />
+      <input type="hidden" name="vendor_id" value={bill.vendor_id} />
+      <input type="hidden" name="payee" value={vendorName} />
+      <input
+        type="hidden"
+        name="description"
+        value={`Bill ${billNumber} payment`}
+      />
+
+      <div className="grid gap-3 md:grid-cols-2">
+        <Field label="Date">
+          <input
+            className="ui-input"
+            name="txn_date"
+            type="date"
+            required
+            defaultValue={todayInputValue()}
+          />
+        </Field>
+        <Field label="Account">
+          <select
+            className="ui-input"
+            name="bank_account_id"
+            required
+            defaultValue={accounts[0]?.id ?? ""}
+          >
+            {accounts.map((account) => (
+              <option key={account.id} value={account.id}>
+                {account.institution ? `${account.institution} ` : ""}
+                {account.name}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <Field label="Amount">
+          <input
+            className="ui-input"
+            name="amount"
+            type="number"
+            step="0.01"
+            min="0.01"
+            required
+            inputMode="decimal"
+            defaultValue={amount > 0 ? String(amount) : ""}
+          />
+        </Field>
+        <Field label="Payment Method">
+          <select className="ui-input" name="payment_method" defaultValue="">
+            <option value="">선택 안 함</option>
+            {paymentMethods.map((method) => (
+              <option key={method.value} value={method.value}>
+                {method.label}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <Field label="Category (선택)">
+          <select className="ui-input" name="category" defaultValue="">
+            <option value="">선택 안 함</option>
+            {expenseCategories.map((category) => (
+              <option key={category} value={category}>
+                {category}
+              </option>
+            ))}
+          </select>
+        </Field>
+      </div>
+
+      <p className="text-xs text-[var(--muted)]">
+        저장하면 어카운팅 장부에 벤더 지급으로 기록되고 빌이 자동으로 Paid
+        처리됩니다.
+      </p>
+      <div className="grid gap-2 sm:grid-cols-2">
+        <button
+          type="button"
+          className="ui-button ui-button-secondary"
+          onClick={onCancel}
+        >
+          취소
+        </button>
+        <button className="ui-button">지급 저장</button>
+      </div>
+    </form>
   );
 }
 

@@ -278,6 +278,7 @@ export async function getPurchasingPageData() {
     jobsResult,
     ordersResult,
     billsResult,
+    accountsResult,
   ] =
     await Promise.all([
     supabase.from("clients").select("*").order("company_name"),
@@ -286,6 +287,7 @@ export async function getPurchasingPageData() {
     supabase.from("jobs").select("*, clients(company_name, name), projects(name, type)").order("name"),
     supabase.from("purchase_orders").select("*, vendors(name), projects(name, type)").order("order_date", { ascending: false }),
     supabase.from("vendor_bills").select("*, vendors(name), projects(name, type)").order("received_date", { ascending: false }),
+    supabase.from("bank_accounts").select("*").order("created_at", { ascending: true }),
   ]);
 
   const jobsSetupError = getMissingJobsTableMessage(jobsResult.error);
@@ -305,6 +307,7 @@ export async function getPurchasingPageData() {
       (order) => !isPurchaseOrderDeleted(order),
     ),
     bills: (billsResult.data ?? []) as VendorBillRow[],
+    accounts: (accountsResult.data ?? []) as BankAccountRow[],
   };
 }
 
