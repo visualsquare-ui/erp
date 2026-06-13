@@ -1,3 +1,6 @@
+import { Check } from "lucide-react";
+import type { ReactNode } from "react";
+
 import type { InvoiceStatus, ProjectStatus } from "@/types/erp";
 
 const statusLabels: Record<ProjectStatus | InvoiceStatus, string> = {
@@ -20,9 +23,15 @@ const toneByStatus: Record<ProjectStatus | InvoiceStatus, string> = {
   on_hold: "border-[var(--warning)]/30 bg-[#FFF7DE] text-[var(--warning)]",
   canceled: "border-[#8A1F1F]/25 bg-[#F8E8E8] text-[#8A1F1F]",
   draft: "border-[var(--border)] bg-white text-[var(--muted)]",
-  sent: "border-[var(--success)]/30 bg-[#E9F6EF] text-[var(--success)]",
-  paid: "border-[var(--success)]/25 bg-[#E9F6EF] text-[var(--success)]",
+  // Sent = awaiting payment. Keep it neutral so it visibly recedes next to paid.
+  sent: "border-[var(--border-strong)] bg-[#F4F2EE] text-[var(--muted)]",
+  // Paid = money received. Strong filled green so it clearly stands out in the list.
+  paid: "border-transparent bg-[var(--success)] text-white",
   overdue: "border-[#8A1F1F]/25 bg-[#F8E8E8] text-[#8A1F1F]",
+};
+
+const iconByStatus: Partial<Record<ProjectStatus | InvoiceStatus, ReactNode>> = {
+  paid: <Check className="h-3.5 w-3.5" aria-hidden="true" />,
 };
 
 type StatusBadgeProps = {
@@ -30,10 +39,13 @@ type StatusBadgeProps = {
 };
 
 export function StatusBadge({ status }: StatusBadgeProps) {
+  const icon = iconByStatus[status];
+
   return (
     <span
-      className={`inline-flex h-6 items-center whitespace-nowrap border px-2 text-xs font-semibold ${toneByStatus[status]}`}
+      className={`inline-flex h-6 items-center gap-1 whitespace-nowrap border px-2 text-xs font-semibold ${toneByStatus[status]}`}
     >
+      {icon}
       {statusLabels[status]}
     </span>
   );

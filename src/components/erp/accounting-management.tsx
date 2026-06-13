@@ -724,6 +724,24 @@ function TransactionForm({
   const categories = direction === "in" ? incomeCategories : expenseCategories;
 
   async function submit(formData: FormData) {
+    // Re-occurrence guard: a client payment with no linked invoice means the
+    // matching invoice will never flip to "입금완료". Make the user confirm
+    // they really meant to skip the link before saving.
+    if (
+      formData.get("type") === "client_payment" &&
+      !formData.get("invoice_id")
+    ) {
+      const proceed = window.confirm(
+        "이 클라이언트 입금을 Invoice에 연결하지 않았습니다.\n" +
+          "연결하지 않으면 해당 인보이스가 '입금완료'로 표시되지 않습니다.\n\n" +
+          "이대로 저장할까요? (취소 후 Invoice를 선택하는 것을 권장합니다)",
+      );
+
+      if (!proceed) {
+        return;
+      }
+    }
+
     if (mode === "edit") {
       await updateTransactionAction(formData);
     } else {
