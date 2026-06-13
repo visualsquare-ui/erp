@@ -1138,25 +1138,54 @@ async function syncLinkedInvoice(
     return;
   }
 
-  const { data: invoice } = await supabase
+  // Core columns that always exist. Kept separate from the optional Stripe
+  // column below so a missing/older schema can never silently break the sync
+  // (a single missing column used to abort the whole update, leaving linked
+  // invoices stuck on "sent").
+  const { data: invoice, error: invoiceError } = await supabase
     .from("invoices")
-    .select("total, status, paid_amount, stripe_payment_status")
+    .select("total, status, paid_amount")
     .eq("id", invoiceId)
     .single();
 
-  if (!invoice) {
+  if (invoiceError || !invoice) {
+    console.error(
+      `syncLinkedInvoice: failed to load invoice ${invoiceId}`,
+      invoiceError,
+    );
     return;
   }
+
+  // Stripe reconciliation is optional and may be absent in some environments;
+  // tolerate a missing column instead of aborting the sync.
+  const { data: stripeRow } = await supabase
+    .from("invoices")
+    .select("stripe_payment_status")
+    .eq("id", invoiceId)
+    .single();
 
   const { data: payments } = await supabase
     .from("account_transactions")
     .select("amount, txn_date")
     .eq("invoice_id", invoiceId)
     .eq("type", "client_payment");
-  const update = buildInvoiceSyncUpdate(invoice, payments ?? []);
+  const update = buildInvoiceSyncUpdate(
+    { ...invoice, stripe_payment_status: stripeRow?.stripe_payment_status ?? null },
+    payments ?? [],
+  );
 
   if (update) {
-    await supabase.from("invoices").update(update).eq("id", invoiceId);
+    const { error: updateError } = await supabase
+      .from("invoices")
+      .update(update)
+      .eq("id", invoiceId);
+
+    if (updateError) {
+      console.error(
+        `syncLinkedInvoice: failed to update invoice ${invoiceId}`,
+        updateError,
+      );
+    }
   }
 }
 
