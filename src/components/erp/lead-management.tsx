@@ -29,6 +29,10 @@ const serviceLabels: Record<string, string> = {
   web: "Web Design",
   print: "Print Design",
   branding: "Branding",
+  restaurant: "Restaurant / Cafe Branding",
+  menu: "Menu Design & Printing",
+  signage: "Banner, Signage, or Window Graphics",
+  "business-card": "Business Cards",
   custom: "Custom Printing",
 };
 

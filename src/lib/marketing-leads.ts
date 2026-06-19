@@ -45,6 +45,10 @@ const SERVICE_TYPE_BY_VALUE: Record<string, ProjectType> = {
   web: "web",
   print: "print",
   branding: "branding",
+  restaurant: "branding",
+  menu: "print",
+  signage: "print",
+  "business-card": "print",
   custom: "print",
 };
 
@@ -52,6 +56,10 @@ const SERVICE_LABEL_BY_VALUE: Record<string, string> = {
   web: "Web design",
   print: "Print",
   branding: "Branding",
+  restaurant: "Restaurant / Cafe Branding",
+  menu: "Menu Design & Printing",
+  signage: "Banner, Signage, or Window Graphics",
+  "business-card": "Business Cards",
   custom: "Custom print",
 };
 

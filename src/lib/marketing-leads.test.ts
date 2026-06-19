@@ -95,4 +95,26 @@ describe("marketing leads", () => {
       status: "quoted",
     });
   });
+
+  it("labels and routes signage leads as print quote jobs", () => {
+    const draft = buildLeadConversionDraft({
+      lead: {
+        id: "lead-2",
+        name: "Jaemin Koo",
+        company_name: "See Nu",
+        email: "jaeminkoo@gmail.com",
+        phone: "6463001615",
+        service: "signage",
+        message: "Business type: Lawyer\nNeeded by: ASAP\n\nTest Message",
+      },
+      clientId: "client-2",
+      today: "2026-06-19",
+    });
+
+    expect(draft.jobInsert).toMatchObject({
+      name: "Banner, Signage, or Window Graphics lead - See Nu",
+      type: "print",
+      status: "quote",
+    });
+  });
 });
