@@ -1,7 +1,12 @@
 import type { AccountTransactionType } from "@/lib/accounting";
 import type { PaymentTerms } from "@/lib/format";
 import type { ProjectType } from "@/lib/project-rules";
-import type { InvoiceStatus, ProjectStatus, TaskStatus } from "@/types/erp";
+import type {
+  InvoiceStatus,
+  MarketingLeadStatus,
+  ProjectStatus,
+  TaskStatus,
+} from "@/types/erp";
 
 export type ClientRow = {
   id: string;
@@ -13,6 +18,37 @@ export type ClientRow = {
   memo: string | null;
   created_at: string;
   updated_at: string;
+};
+
+export type MarketingLeadRow = {
+  id: string;
+  created_at: string;
+  status: MarketingLeadStatus;
+  name: string;
+  email: string | null;
+  phone: string | null;
+  company_name: string | null;
+  service: string;
+  message: string;
+  language: string | null;
+  landing_path: string | null;
+  referrer: string | null;
+  utm_source: string | null;
+  utm_medium: string | null;
+  utm_campaign: string | null;
+  utm_term: string | null;
+  utm_content: string | null;
+  gclid: string | null;
+  gbraid: string | null;
+  wbraid: string | null;
+  fbclid: string | null;
+  lead_event_id: string | null;
+  converted_client_id: string | null;
+  converted_job_id: string | null;
+  lost_reason: string | null;
+  memo: string | null;
+  clients?: Pick<ClientRow, "company_name" | "name"> | null;
+  jobs?: Pick<JobRow, "name"> | null;
 };
 
 export type VendorRow = {

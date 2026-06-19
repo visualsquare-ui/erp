@@ -19,3 +19,4 @@ pnpm-debug.log*
 .playwright-mcp/
 outputs/
 archive/
+supabase/.temp/

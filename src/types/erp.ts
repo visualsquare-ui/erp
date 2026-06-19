@@ -47,6 +47,14 @@ export type Task = {
 
 export type InvoiceStatus = "draft" | "sent" | "paid" | "overdue";
 
+export type MarketingLeadStatus =
+  | "new"
+  | "contacted"
+  | "quoted"
+  | "won"
+  | "lost"
+  | "spam";
+
 export type Invoice = {
   id: string;
   projectId: string;
