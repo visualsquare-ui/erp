@@ -16,6 +16,12 @@ type LeadManagementProps = {
   initialStatus?: string;
 };
 
+type ParsedLeadMessage = {
+  businessType: string | null;
+  neededBy: string | null;
+  body: string;
+};
+
 const statusOptions: { value: MarketingLeadStatus; label: string }[] = [
   { value: "new", label: "신규" },
   { value: "contacted", label: "연락 완료" },
@@ -60,6 +66,57 @@ function filterUnique(values: string[]) {
   return Array.from(new Set(values.filter(Boolean))).sort((a, b) =>
     a.localeCompare(b),
   );
+}
+
+function parseLeadMessage(message: string): ParsedLeadMessage {
+  const lines = message.split(/\r?\n/);
+  let businessType: string | null = null;
+  let neededBy: string | null = null;
+  let bodyStartIndex = 0;
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index] ?? "";
+    const businessTypeMatch = line.match(/^Business type:\s*(.+)$/i);
+    const neededByMatch = line.match(/^Needed by:\s*(.+)$/i);
+
+    if (businessTypeMatch) {
+      businessType = businessTypeMatch[1];
+      bodyStartIndex = index + 1;
+      continue;
+    }
+
+    if (neededByMatch) {
+      neededBy = neededByMatch[1];
+      bodyStartIndex = index + 1;
+      continue;
+    }
+
+    if (line === "" && (businessType || neededBy)) {
+      bodyStartIndex = index + 1;
+    }
+
+    break;
+  }
+
+  if (!businessType && !neededBy) {
+    return {
+      businessType: null,
+      neededBy: null,
+      body: message,
+    };
+  }
+
+  const bodyLines = lines.slice(bodyStartIndex);
+
+  while (bodyLines[0] === "") {
+    bodyLines.shift();
+  }
+
+  return {
+    businessType,
+    neededBy,
+    body: bodyLines.join("\n").trim() || message,
+  };
 }
 
 export function LeadManagement({
@@ -201,6 +258,15 @@ function FilterSelect({
 function LeadRow({ lead }: { lead: MarketingLeadRow }) {
   const source = getLeadSource(lead);
   const converted = Boolean(lead.converted_client_id || lead.converted_job_id);
+  const parsedMessage = parseLeadMessage(lead.message);
+  const metadata = [
+    {
+      label: "Created",
+      value: formatUsDate(lead.created_at.slice(0, 10)),
+    },
+    { label: "Landing", value: lead.landing_path },
+    { label: "Campaign", value: lead.utm_campaign },
+  ];
 
   return (
     <article className="ui-card grid gap-4 p-5 xl:grid-cols-[minmax(0,1fr)_18rem]">
@@ -210,7 +276,7 @@ function LeadRow({ lead }: { lead: MarketingLeadRow }) {
           <span className="border border-[var(--border)] px-2 py-1 text-xs font-semibold text-[var(--muted)]">
             {serviceLabels[lead.service] ?? lead.service}
           </span>
-          <span className="border border-[var(--border)] px-2 py-1 text-xs font-semibold text-[var(--muted)]">
+          <span className="border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs font-semibold text-[var(--muted)]">
             {source}
           </span>
         </div>
@@ -222,14 +288,25 @@ function LeadRow({ lead }: { lead: MarketingLeadRow }) {
           {lead.email ? ` · ${lead.email}` : ""}
           {lead.phone ? ` · ${lead.phone}` : ""}
         </p>
-        <p className="mt-3 whitespace-pre-wrap text-sm leading-6">
-          {lead.message}
+
+        {(parsedMessage.businessType || parsedMessage.neededBy) && (
+          <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
+            <HighlightDetail
+              label="Business type"
+              value={parsedMessage.businessType}
+            />
+            <HighlightDetail label="Needed by" value={parsedMessage.neededBy} />
+          </dl>
+        )}
+
+        <p className="mt-4 whitespace-pre-wrap text-sm leading-6">
+          {parsedMessage.body}
         </p>
-        <dl className="mt-4 grid gap-2 text-xs text-[var(--muted)] sm:grid-cols-2">
-          <Detail label="Created" value={formatUsDate(lead.created_at.slice(0, 10))} />
-          <Detail label="Landing" value={lead.landing_path} />
-          <Detail label="Campaign" value={lead.utm_campaign} />
-          <Detail label="Event" value={lead.lead_event_id} />
+
+        <dl className="mt-5 flex flex-wrap gap-x-6 gap-y-2 border-t border-[var(--border)] pt-3 text-xs text-[var(--muted)]">
+          {metadata.map((item) => (
+            <Detail key={item.label} label={item.label} value={item.value} />
+          ))}
         </dl>
       </div>
 
@@ -282,6 +359,27 @@ function LeadRow({ lead }: { lead: MarketingLeadRow }) {
         </form>
       </div>
     </article>
+  );
+}
+
+function HighlightDetail({
+  label,
+  value,
+}: {
+  label: string;
+  value: string | null;
+}) {
+  if (!value) {
+    return null;
+  }
+
+  return (
+    <div>
+      <dt className="ui-label">{label}</dt>
+      <dd className="mt-1 break-words font-medium text-[var(--foreground)]">
+        {value}
+      </dd>
+    </div>
   );
 }
 
