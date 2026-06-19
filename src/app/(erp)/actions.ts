@@ -357,6 +357,52 @@ export async function updateMarketingLeadAction(formData: FormData) {
   revalidatePath("/");
 }
 
+export async function markMarketingLeadSpamAction(formData: FormData) {
+  const leadId = text(formData, "lead_id");
+
+  if (!leadId) {
+    return;
+  }
+
+  const { supabase } = await getAuthedSupabase("/leads");
+  const { error } = await supabase
+    .from("marketing_leads")
+    .update({ status: "spam" })
+    .eq("id", leadId);
+
+  if (error) {
+    throw new Error(`Lead spam 처리 실패: ${error.message}`);
+  }
+
+  revalidatePath("/leads");
+  revalidatePath("/dashboard");
+  revalidatePath("/");
+}
+
+export async function deleteMarketingLeadAction(formData: FormData) {
+  const leadId = text(formData, "lead_id");
+
+  if (!leadId) {
+    return;
+  }
+
+  const { supabase } = await getAuthedSupabase("/leads");
+  const { error } = await supabase
+    .from("marketing_leads")
+    .delete()
+    .eq("id", leadId)
+    .is("converted_client_id", null)
+    .is("converted_job_id", null);
+
+  if (error) {
+    throw new Error(`Lead 삭제 실패: ${error.message}`);
+  }
+
+  revalidatePath("/leads");
+  revalidatePath("/dashboard");
+  revalidatePath("/");
+}
+
 export async function convertMarketingLeadAction(formData: FormData) {
   const leadId = text(formData, "lead_id");
 

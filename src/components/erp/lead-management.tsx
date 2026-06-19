@@ -1,10 +1,12 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ArrowRight, Search } from "lucide-react";
+import { ArrowRight, Ban, Search, Trash2 } from "lucide-react";
 
 import {
   convertMarketingLeadAction,
+  deleteMarketingLeadAction,
+  markMarketingLeadSpamAction,
   updateMarketingLeadAction,
 } from "@/app/(erp)/actions";
 import { formatUsDate } from "@/lib/format";
@@ -357,6 +359,50 @@ function LeadRow({ lead }: { lead: MarketingLeadRow }) {
             <ArrowRight className="ml-2 h-4 w-4" aria-hidden="true" />
           </button>
         </form>
+
+        <div className="grid grid-cols-2 gap-2">
+          <form action={markMarketingLeadSpamAction}>
+            <input type="hidden" name="lead_id" value={lead.id} />
+            <button
+              className="ui-button ui-button-secondary w-full border-[#8A1F1F]/25 bg-[#F8E8E8] text-[#8A1F1F] hover:bg-[#F2DCDC]"
+              disabled={converted || lead.status === "spam"}
+              title={
+                converted
+                  ? "Client 또는 Job으로 연결된 리드는 상태로 관리하세요"
+                  : undefined
+              }
+            >
+              <Ban className="mr-2 h-4 w-4" aria-hidden="true" />
+              Spam
+            </button>
+          </form>
+          <form
+            action={deleteMarketingLeadAction}
+            onSubmit={(event) => {
+              if (
+                !window.confirm(
+                  "이 리드를 완전히 삭제할까요? 삭제 후에는 복구할 수 없습니다.",
+                )
+              ) {
+                event.preventDefault();
+              }
+            }}
+          >
+            <input type="hidden" name="lead_id" value={lead.id} />
+            <button
+              className="ui-button ui-button-secondary w-full border-[#8A1F1F]/25 text-[#8A1F1F] hover:bg-[#F8E8E8]"
+              disabled={converted}
+              title={
+                converted
+                  ? "Client 또는 Job으로 연결된 리드는 삭제하지 않습니다"
+                  : undefined
+              }
+            >
+              <Trash2 className="mr-2 h-4 w-4" aria-hidden="true" />
+              삭제
+            </button>
+          </form>
+        </div>
       </div>
     </article>
   );
