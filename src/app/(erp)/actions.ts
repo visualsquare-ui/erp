@@ -22,12 +22,18 @@ import {
 import { addPaymentTermDays, type PaymentTerms } from "@/lib/format";
 import { optionalFormText } from "@/lib/form-values";
 import { getAuthedSupabase } from "@/lib/erp-data";
+import {
+  buildLeadConversionDraft,
+  findExistingClientForLead,
+} from "@/lib/marketing-leads";
 import type { ProjectType } from "@/lib/project-rules";
 import {
   getInvoiceItemSchemaHint,
   getVendorBillSchemaHint,
 } from "@/lib/supabase-schema-errors";
 import type { ProjectStatus, TaskStatus } from "@/types/erp";
+import type { MarketingLeadStatus } from "@/types/erp";
+import type { ClientRow, MarketingLeadRow } from "@/types/database";
 
 function text(formData: FormData, key: string): string | null {
   const value = String(formData.get(key) ?? "").trim();
@@ -45,6 +51,15 @@ function checkbox(formData: FormData, key: string): boolean {
 function todayIso(): string {
   return new Date().toISOString().slice(0, 10);
 }
+
+const MARKETING_LEAD_STATUSES = new Set<MarketingLeadStatus>([
+  "new",
+  "contacted",
+  "quoted",
+  "won",
+  "lost",
+  "spam",
+]);
 
 type AuthedSupabaseClient = Awaited<
   ReturnType<typeof getAuthedSupabase>
@@ -312,6 +327,120 @@ export async function deleteClientAction(formData: FormData) {
   await supabase.from("clients").delete().eq("id", clientId);
 
   revalidatePath("/clients");
+  revalidatePath("/");
+}
+
+export async function updateMarketingLeadAction(formData: FormData) {
+  const leadId = text(formData, "lead_id");
+  const status = text(formData, "status") as MarketingLeadStatus | null;
+
+  if (!leadId || !status || !MARKETING_LEAD_STATUSES.has(status)) {
+    return;
+  }
+
+  const { supabase } = await getAuthedSupabase("/leads");
+  const { error } = await supabase
+    .from("marketing_leads")
+    .update({
+      status,
+      lost_reason: text(formData, "lost_reason"),
+      memo: text(formData, "memo"),
+    })
+    .eq("id", leadId);
+
+  if (error) {
+    throw new Error(`Lead 상태 저장 실패: ${error.message}`);
+  }
+
+  revalidatePath("/leads");
+  revalidatePath("/dashboard");
+  revalidatePath("/");
+}
+
+export async function convertMarketingLeadAction(formData: FormData) {
+  const leadId = text(formData, "lead_id");
+
+  if (!leadId) {
+    return;
+  }
+
+  const { supabase } = await getAuthedSupabase("/leads");
+  const [leadResult, clientsResult] = await Promise.all([
+    supabase.from("marketing_leads").select("*").eq("id", leadId).single(),
+    supabase.from("clients").select("*"),
+  ]);
+
+  if (leadResult.error || !leadResult.data) {
+    throw new Error(
+      `Lead 조회 실패: ${leadResult.error?.message ?? "not found"}`,
+    );
+  }
+
+  if (clientsResult.error) {
+    throw new Error(`Client 조회 실패: ${clientsResult.error.message}`);
+  }
+
+  const lead = leadResult.data as MarketingLeadRow;
+  const clients = (clientsResult.data ?? []) as ClientRow[];
+  const existingClient = findExistingClientForLead(clients, lead);
+  let clientId = existingClient?.id ?? null;
+
+  if (!clientId) {
+    const draft = buildLeadConversionDraft({
+      lead,
+      clientId: "pending-client",
+      today: todayIso(),
+    });
+    const { data: createdClient, error: clientError } = await supabase
+      .from("clients")
+      .insert(draft.clientInsert)
+      .select("id")
+      .single();
+
+    if (clientError || !createdClient?.id) {
+      throw new Error(
+        `Client 생성 실패: ${clientError?.message ?? "missing id"}`,
+      );
+    }
+
+    clientId = createdClient.id;
+  }
+
+  if (!clientId) {
+    throw new Error("Client 연결 실패: missing id");
+  }
+
+  const draft = buildLeadConversionDraft({
+    lead,
+    clientId,
+    today: todayIso(),
+  });
+  const { data: createdJob, error: jobError } = await supabase
+    .from("jobs")
+    .insert(draft.jobInsert)
+    .select("id")
+    .single();
+
+  if (jobError || !createdJob?.id) {
+    throw new Error(`Job 생성 실패: ${jobError?.message ?? "missing id"}`);
+  }
+
+  const { error: leadError } = await supabase
+    .from("marketing_leads")
+    .update({
+      ...draft.leadUpdate,
+      converted_job_id: createdJob.id,
+    })
+    .eq("id", leadId);
+
+  if (leadError) {
+    throw new Error(`Lead 전환 저장 실패: ${leadError.message}`);
+  }
+
+  revalidatePath("/leads");
+  revalidatePath("/clients");
+  revalidatePath("/jobs");
+  revalidatePath("/dashboard");
   revalidatePath("/");
 }
 

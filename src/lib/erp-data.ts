@@ -10,6 +10,7 @@ import type {
   InvoiceItemRow,
   InvoiceRow,
   JobRow,
+  MarketingLeadRow,
   ProjectRow,
   ProofVersionRow,
   PurchaseOrderRow,
@@ -56,6 +57,18 @@ function getMissingJobsTableMessage(error: { message: string } | null) {
   return null;
 }
 
+function getMissingMarketingLeadsTableMessage(error: { message: string } | null) {
+  if (!error) {
+    return null;
+  }
+
+  if (error.message.includes("public.marketing_leads")) {
+    return "Supabase에 marketing_leads 테이블이 아직 없습니다. supabase/migrations/202606150001_marketing_leads.sql 을 실행해 주세요.";
+  }
+
+  return null;
+}
+
 export async function getAuthedSupabase(pathname = "/") {
   const supabase = await createClient();
   const {
@@ -81,6 +94,7 @@ export async function getDashboardData() {
     assetsResult,
     accountsResult,
     transactionsResult,
+    leadsResult,
   ] = await Promise.all([
     supabase.from("clients").select("*").order("created_at"),
     supabase.from("projects").select("*, clients(company_name, name)").order("due_date"),
@@ -94,6 +108,9 @@ export async function getDashboardData() {
     supabase.from("assets").select("*, projects(name, type)").eq("is_portfolio", true).order("created_at"),
     supabase.from("bank_accounts").select("*").order("created_at"),
     supabase.from("account_transactions").select("*").order("txn_date"),
+    supabase.from("marketing_leads").select("*").order("created_at", {
+      ascending: false,
+    }),
   ]);
 
   return {
@@ -107,6 +124,32 @@ export async function getDashboardData() {
     assets: (assetsResult.data ?? []) as AssetRow[],
     accounts: (accountsResult.data ?? []) as BankAccountRow[],
     transactions: (transactionsResult.data ?? []) as AccountTransactionRow[],
+    leads: (leadsResult.data ?? []) as MarketingLeadRow[],
+  };
+}
+
+export async function getLeadsPageData() {
+  const { user, supabase } = await getAuthedSupabase("/leads");
+  const [leadsResult, clientsResult] = await Promise.all([
+    supabase
+      .from("marketing_leads")
+      .select("*, clients(company_name, name), jobs(name)")
+      .order("created_at", { ascending: false }),
+    supabase.from("clients").select("*").order("company_name"),
+  ]);
+  const setupError = getMissingMarketingLeadsTableMessage(leadsResult.error);
+
+  if (!setupError) {
+    throwIfSupabaseError(leadsResult.error, "Marketing leads 조회 실패");
+  }
+
+  throwIfSupabaseError(clientsResult.error, "Clients 조회 실패");
+
+  return {
+    user,
+    leads: (leadsResult.data ?? []) as MarketingLeadRow[],
+    clients: (clientsResult.data ?? []) as ClientRow[],
+    setupError,
   };
 }
 

@@ -7,6 +7,7 @@ import {
   GalleryHorizontalEnd,
   Landmark,
   LayoutDashboard,
+  Megaphone,
   ReceiptText,
   Truck,
   UsersRound,
@@ -18,6 +19,7 @@ import logo from "../../../assets/vs-logo-transparent.png";
 
 const navItems = [
   { label: "대시보드", href: "/dashboard", icon: LayoutDashboard },
+  { label: "리드", href: "/leads", icon: Megaphone },
   { label: "고객", href: "/clients", icon: UsersRound },
   { label: "벤더", href: "/vendors", icon: Truck },
   { label: "Jobs", href: "/jobs", icon: BriefcaseBusiness },

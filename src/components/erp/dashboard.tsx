@@ -12,6 +12,7 @@ import {
   toNumber,
 } from "@/lib/erp-calculations";
 import { formatCurrency, formatUsDate } from "@/lib/format";
+import { summarizeRecentLeads } from "@/lib/marketing-leads";
 import type {
   AccountTransactionRow,
   AssetRow,
@@ -19,6 +20,7 @@ import type {
   ClientRow,
   InvoiceRow,
   JobRow,
+  MarketingLeadRow,
   ProjectRow,
   TaskRow,
   VendorBillRow,
@@ -40,6 +42,7 @@ type DashboardProps = {
     assets: AssetRow[];
     accounts: BankAccountRow[];
     transactions: AccountTransactionRow[];
+    leads: MarketingLeadRow[];
   };
 };
 
@@ -77,6 +80,7 @@ export function Dashboard({ data }: DashboardProps) {
     ),
   );
   const cashFlow = summarizeTransactions(data.transactions, currentMonthIso);
+  const leadSummary = summarizeRecentLeads(data.leads);
   const urgentTasks = data.tasks
     .filter((task) => task.status !== "done")
     .sort((a, b) => (a.due_date ?? "").localeCompare(b.due_date ?? ""))
@@ -145,6 +149,40 @@ export function Dashboard({ data }: DashboardProps) {
             value={formatCurrency(cashFlow.net)}
             detail={`입금 ${formatCurrency(cashFlow.moneyIn)} · 지출 ${formatCurrency(cashFlow.moneyOut)}`}
             tone={cashFlow.net >= 0 ? "green" : "neutral"}
+          />
+        </Link>
+      </section>
+
+      <section className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <Link href="/leads" className="block">
+          <MetricCard
+            label="30일 리드"
+            value={`${leadSummary.total}`}
+            detail={`${leadSummary.new}건 신규 문의`}
+            tone="coral"
+          />
+        </Link>
+        <Link href="/leads?status=contacted" className="block">
+          <MetricCard
+            label="연락 완료"
+            value={`${leadSummary.contacted}`}
+            detail="상담 진행 중"
+            tone="blue"
+          />
+        </Link>
+        <Link href="/leads?status=quoted" className="block">
+          <MetricCard
+            label="견적 전환"
+            value={`${leadSummary.quoted}`}
+            detail="Job으로 전환됨"
+            tone="green"
+          />
+        </Link>
+        <Link href="/leads?status=won" className="block">
+          <MetricCard
+            label="Won"
+            value={`${leadSummary.won}`}
+            detail="실제 수주 표시"
           />
         </Link>
       </section>
