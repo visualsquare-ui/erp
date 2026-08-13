@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronDown, Pencil, Search, Trash2 } from "lucide-react";
 
 import {
@@ -23,6 +23,11 @@ import type {
 
 type AddressSuggestion = {
   label: string;
+  placeId: string;
+};
+
+type SelectedAddress = {
+  label: string;
   street: string;
   city: string;
   state: string;
@@ -31,6 +36,10 @@ type AddressSuggestion = {
 
 type AddressSuggestionsResponse = {
   suggestions: AddressSuggestion[];
+};
+
+type SelectedAddressResponse = {
+  address: SelectedAddress;
 };
 
 type InvoiceWithItems = InvoiceRow & {
@@ -192,6 +201,11 @@ function ClientForm({
   const [suggestions, setSuggestions] = useState<AddressSuggestion[]>([]);
   const [isSuggesting, setIsSuggesting] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [suggestionError, setSuggestionError] = useState("");
+  const [addressSessionToken, setAddressSessionToken] = useState(() =>
+    crypto.randomUUID(),
+  );
+  const suppressNextLookup = useRef(false);
 
   const combinedAddress = useMemo(
     () => buildAddress({ street, street1, city, state, zip }),
@@ -199,6 +213,11 @@ function ClientForm({
   );
 
   useEffect(() => {
+    if (suppressNextLookup.current) {
+      suppressNextLookup.current = false;
+      return;
+    }
+
     const query = [street, city, state, zip].filter(Boolean).join(", ");
 
     if (query.trim().length < 4) {
@@ -208,18 +227,26 @@ function ClientForm({
     const controller = new AbortController();
     const timer = window.setTimeout(async () => {
       setIsSuggesting(true);
+      setSuggestionError("");
 
       try {
         const response = await fetch(
-          `/api/address-suggestions?q=${encodeURIComponent(query)}`,
+          `/api/address-suggestions?q=${encodeURIComponent(query)}&sessionToken=${encodeURIComponent(addressSessionToken)}`,
           { signal: controller.signal },
         );
+
+        if (!response.ok) {
+          throw new Error("Address autocomplete failed.");
+        }
+
         const data = (await response.json()) as AddressSuggestionsResponse;
         setSuggestions(data.suggestions ?? []);
         setShowSuggestions(true);
       } catch {
         if (!controller.signal.aborted) {
           setSuggestions([]);
+          setSuggestionError("주소 검색을 사용할 수 없습니다. 직접 입력해 주세요.");
+          setShowSuggestions(true);
         }
       } finally {
         if (!controller.signal.aborted) {
@@ -232,14 +259,38 @@ function ClientForm({
       controller.abort();
       window.clearTimeout(timer);
     };
-  }, [city, state, street, zip]);
+  }, [addressSessionToken, city, state, street, zip]);
 
-  function applySuggestion(suggestion: AddressSuggestion) {
-    setStreet(suggestion.street);
-    setCity(suggestion.city);
-    setState(suggestion.state);
-    setZip(suggestion.zip);
-    setShowSuggestions(false);
+  async function applySuggestion(suggestion: AddressSuggestion) {
+    setIsSuggesting(true);
+    setSuggestionError("");
+
+    try {
+      const response = await fetch(
+        `/api/address-suggestions?placeId=${encodeURIComponent(suggestion.placeId)}&sessionToken=${encodeURIComponent(addressSessionToken)}`,
+      );
+
+      if (!response.ok) {
+        throw new Error("Address details failed.");
+      }
+
+      const data = (await response.json()) as SelectedAddressResponse;
+      suppressNextLookup.current = true;
+      setStreet(data.address.street);
+      setCity(data.address.city);
+      setState(data.address.state);
+      setZip(data.address.zip);
+      setSuggestions([]);
+      setShowSuggestions(false);
+      setAddressSessionToken(crypto.randomUUID());
+    } catch {
+      setSuggestionError(
+        "주소 세부 정보를 불러오지 못했습니다. 직접 입력해 주세요.",
+      );
+      setShowSuggestions(true);
+    } finally {
+      setIsSuggesting(false);
+    }
   }
 
   async function submitClient(formData: FormData) {
@@ -327,6 +378,7 @@ function ClientForm({
               onChange={(event) => {
                 const value = event.target.value;
                 setStreet(value);
+                setSuggestionError("");
                 if (value.trim().length < 4) {
                   setSuggestions([]);
                 }
@@ -335,7 +387,8 @@ function ClientForm({
               onFocus={() => setShowSuggestions(true)}
             />
           </Field>
-          {showSuggestions && (suggestions.length > 0 || isSuggesting) ? (
+          {showSuggestions &&
+          (suggestions.length > 0 || isSuggesting || suggestionError) ? (
             <div className="absolute left-0 right-0 top-full z-30 mt-1 border border-[var(--border-strong)] bg-white shadow-[0_14px_35px_rgba(20,20,20,0.08)]">
               {isSuggesting ? (
                 <p className="px-3 py-2 text-sm text-[var(--muted)]">
@@ -347,11 +400,16 @@ function ClientForm({
                   key={suggestion.label}
                   type="button"
                   className="block w-full border-t border-[var(--border)] px-3 py-2 text-left text-sm first:border-t-0 hover:bg-[var(--surface)] focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--coral)]"
-                  onClick={() => applySuggestion(suggestion)}
+                  onClick={() => void applySuggestion(suggestion)}
                 >
                   {suggestion.label}
                 </button>
               ))}
+              {suggestionError ? (
+                <p className="border-t border-[var(--border)] px-3 py-2 text-sm text-[#8a2f1e] first:border-t-0">
+                  {suggestionError}
+                </p>
+              ) : null}
             </div>
           ) : null}
         </div>
@@ -572,7 +630,7 @@ export function ClientManagement({
           aria-hidden="true"
         />
         <input
-          className="ui-input pl-9"
+          className="ui-input !pl-10"
           type="search"
           placeholder="Search clients by company, contact, email, phone, address..."
           value={searchQuery}
