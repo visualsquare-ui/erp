@@ -7,6 +7,8 @@ import type {
   AssetRow,
   BankAccountRow,
   ClientRow,
+  EstimateItemRow,
+  EstimateRow,
   InvoiceItemRow,
   InvoiceRow,
   JobRow,
@@ -309,6 +311,51 @@ export async function getInvoicesPageData() {
     ),
     invoices: (invoicesResult.data ?? []) as (InvoiceRow & { invoice_items: InvoiceItemRow[] })[],
     accounts: (accountsResult.data ?? []) as BankAccountRow[],
+  };
+}
+
+function getMissingEstimatesTableMessage(error: { message: string } | null) {
+  if (!error) {
+    return null;
+  }
+
+  if (error.message.includes("estimates") || error.message.includes("estimate_items")) {
+    return "Supabase에 estimates 테이블이 아직 없습니다. supabase/migrations/202611020001_estimates.sql 을 실행해 주세요.";
+  }
+
+  return error.message;
+}
+
+export async function getEstimatesPageData() {
+  const { user, supabase } = await getAuthedSupabase("/estimates");
+  const [clientsResult, jobsResult, estimatesResult] = await Promise.all([
+    supabase.from("clients").select("*").order("company_name"),
+    supabase
+      .from("jobs")
+      .select("id, client_id, name, status")
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("estimates")
+      .select(
+        "*, clients(company_name, name, email, address), jobs(name), estimate_items(*)",
+      )
+      .order("issue_date", { ascending: false })
+      .order("estimate_number", { ascending: false }),
+  ]);
+
+  throwIfSupabaseError(clientsResult.error, "고객 조회 실패");
+
+  return {
+    user,
+    clients: (clientsResult.data ?? []) as ClientRow[],
+    jobs: (jobsResult.data ?? []) as Pick<
+      JobRow,
+      "id" | "client_id" | "name" | "status"
+    >[],
+    estimates: (estimatesResult.data ?? []) as (EstimateRow & {
+      estimate_items: EstimateItemRow[];
+    })[],
+    schemaError: getMissingEstimatesTableMessage(estimatesResult.error),
   };
 }
 

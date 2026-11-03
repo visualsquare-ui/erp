@@ -2,6 +2,7 @@ import type { AccountTransactionType } from "@/lib/accounting";
 import type { PaymentTerms } from "@/lib/format";
 import type { ProjectType } from "@/lib/project-rules";
 import type {
+  EstimateStatus,
   InvoiceStatus,
   MarketingLeadStatus,
   ProjectStatus,
@@ -169,6 +170,37 @@ export type InvoiceItemRow = {
   invoice_id: string;
   purchase_order_id: string | null;
   job_id: string | null;
+  description: string;
+  quantity: string | number;
+  unit_price: string | number;
+  amount: string | number;
+  is_taxable: boolean;
+  tax_rate: string | number;
+};
+
+export type EstimateRow = {
+  id: string;
+  client_id: string;
+  job_id: string | null;
+  estimate_number: string;
+  issue_date: string;
+  valid_until: string | null;
+  status: EstimateStatus;
+  subtotal: string | number;
+  tax: string | number;
+  total: string | number;
+  notes: string | null;
+  sent_at: string | null;
+  created_at: string;
+  updated_at: string;
+  clients?: Pick<ClientRow, "company_name" | "name" | "email" | "address"> | null;
+  jobs?: Pick<JobRow, "name"> | null;
+};
+
+export type EstimateItemRow = {
+  id: string;
+  estimate_id: string;
+  position: number;
   description: string;
   quantity: string | number;
   unit_price: string | number;

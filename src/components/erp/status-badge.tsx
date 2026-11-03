@@ -1,9 +1,11 @@
 import { Check } from "lucide-react";
 import type { ReactNode } from "react";
 
-import type { InvoiceStatus, ProjectStatus } from "@/types/erp";
+import type { EstimateStatus, InvoiceStatus, ProjectStatus } from "@/types/erp";
 
-const statusLabels: Record<ProjectStatus | InvoiceStatus, string> = {
+type BadgeStatus = ProjectStatus | InvoiceStatus | EstimateStatus;
+
+const statusLabels: Record<BadgeStatus, string> = {
   quote: "견적",
   in_progress: "진행중",
   done: "완료",
@@ -13,9 +15,11 @@ const statusLabels: Record<ProjectStatus | InvoiceStatus, string> = {
   sent: "발송",
   paid: "입금완료",
   overdue: "연체",
+  accepted: "수락",
+  declined: "거절",
 };
 
-const toneByStatus: Record<ProjectStatus | InvoiceStatus, string> = {
+const toneByStatus: Record<BadgeStatus, string> = {
   quote: "border-[var(--info)]/30 bg-[#EDF5FA] text-[var(--info)]",
   in_progress:
     "border-[var(--coral)]/35 bg-[var(--coral-quiet)] text-[var(--coral-strong)]",
@@ -28,14 +32,18 @@ const toneByStatus: Record<ProjectStatus | InvoiceStatus, string> = {
   // Paid = money received. Strong filled green so it clearly stands out in the list.
   paid: "border-transparent bg-[var(--success)] text-white",
   overdue: "border-[#8A1F1F]/25 bg-[#F8E8E8] text-[#8A1F1F]",
+  // Accepted estimate = won work. Same filled green as paid so wins stand out.
+  accepted: "border-transparent bg-[var(--success)] text-white",
+  declined: "border-[#8A1F1F]/25 bg-[#F8E8E8] text-[#8A1F1F]",
 };
 
-const iconByStatus: Partial<Record<ProjectStatus | InvoiceStatus, ReactNode>> = {
+const iconByStatus: Partial<Record<BadgeStatus, ReactNode>> = {
   paid: <Check className="h-3.5 w-3.5" aria-hidden="true" />,
+  accepted: <Check className="h-3.5 w-3.5" aria-hidden="true" />,
 };
 
 type StatusBadgeProps = {
-  status: ProjectStatus | InvoiceStatus;
+  status: BadgeStatus;
 };
 
 export function StatusBadge({ status }: StatusBadgeProps) {

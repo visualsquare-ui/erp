@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import {
   BriefcaseBusiness,
+  FileSignature,
   FileText,
   Folder,
   GalleryHorizontalEnd,
@@ -23,6 +24,7 @@ const navItems = [
   { label: "고객", href: "/clients", icon: UsersRound },
   { label: "벤더", href: "/vendors", icon: Truck },
   { label: "Jobs", href: "/jobs", icon: BriefcaseBusiness },
+  { label: "Estimate", href: "/estimates", icon: FileSignature },
   { label: "PO / Bill", href: "/purchasing", icon: ReceiptText },
   { label: "Invoice", href: "/invoices", icon: FileText },
   { label: "어카운팅", href: "/accounting", icon: Landmark },

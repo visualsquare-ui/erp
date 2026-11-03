@@ -47,6 +47,8 @@ export type Task = {
 
 export type InvoiceStatus = "draft" | "sent" | "paid" | "overdue";
 
+export type EstimateStatus = "draft" | "sent" | "accepted" | "declined";
+
 export type MarketingLeadStatus =
   | "new"
   | "contacted"

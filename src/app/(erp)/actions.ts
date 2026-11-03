@@ -19,6 +19,10 @@ import {
   getDateNumberToken,
   getVendorCode,
 } from "@/lib/document-numbering";
+import {
+  buildNextEstimateNumber,
+  getDefaultEstimateValidUntil,
+} from "@/lib/estimate-document";
 import { addPaymentTermDays, type PaymentTerms } from "@/lib/format";
 import { optionalFormText } from "@/lib/form-values";
 import { getAuthedSupabase } from "@/lib/erp-data";
@@ -32,7 +36,7 @@ import {
   getVendorBillSchemaHint,
 } from "@/lib/supabase-schema-errors";
 import type { ProjectStatus, TaskStatus } from "@/types/erp";
-import type { MarketingLeadStatus } from "@/types/erp";
+import type { EstimateStatus, MarketingLeadStatus } from "@/types/erp";
 import type { ClientRow, MarketingLeadRow } from "@/types/database";
 
 function text(formData: FormData, key: string): string | null {
@@ -1196,6 +1200,210 @@ export async function deleteInvoiceAction(formData: FormData) {
     revalidatePath(`/projects/${projectId}`);
   }
   revalidatePath("/");
+}
+
+const ESTIMATE_STATUSES = new Set<EstimateStatus>([
+  "draft",
+  "sent",
+  "accepted",
+  "declined",
+]);
+
+type EstimateItemInput = {
+  description: string;
+  quantity: number;
+  unitPrice: number;
+  isTaxable: boolean;
+  taxRate: number;
+};
+
+function parseEstimateItems(formData: FormData): EstimateItemInput[] {
+  const rawItems = text(formData, "estimate_items_json");
+  let parsed: unknown = [];
+
+  try {
+    parsed = rawItems ? JSON.parse(rawItems) : [];
+  } catch {
+    parsed = [];
+  }
+
+  if (!Array.isArray(parsed)) {
+    return [];
+  }
+
+  return parsed
+    .map((item) => {
+      const source = item as Partial<EstimateItemInput>;
+
+      return {
+        description: String(source.description ?? "").trim(),
+        quantity: toNumber(source.quantity) || 1,
+        unitPrice: Math.max(toNumber(source.unitPrice), 0),
+        isTaxable: Boolean(source.isTaxable),
+        taxRate: Math.max(toNumber(source.taxRate), 0),
+      };
+    })
+    .filter((item) => item.description && item.quantity > 0);
+}
+
+function parseEstimateStatus(formData: FormData): EstimateStatus {
+  const status = text(formData, "status") as EstimateStatus | null;
+  return status && ESTIMATE_STATUSES.has(status) ? status : "draft";
+}
+
+function estimatePayload(formData: FormData, items: EstimateItemInput[]) {
+  const issueDate = text(formData, "issue_date") ?? todayIso();
+  const draft = calculateInvoiceDraft(
+    items.map((item) => ({
+      quantity: item.quantity,
+      unitPrice: item.unitPrice,
+      isTaxable: item.isTaxable,
+      taxRate: item.taxRate,
+    })),
+  );
+
+  return {
+    client_id: text(formData, "client_id"),
+    job_id: optionalFormText(formData, "job_id"),
+    issue_date: issueDate,
+    valid_until:
+      text(formData, "valid_until") ?? getDefaultEstimateValidUntil(issueDate),
+    status: parseEstimateStatus(formData),
+    subtotal: draft.subtotal,
+    tax: draft.tax,
+    total: draft.total,
+    notes: text(formData, "notes"),
+  };
+}
+
+function estimateItemRows(estimateId: string, items: EstimateItemInput[]) {
+  return items.map((item, index) => ({
+    estimate_id: estimateId,
+    position: index,
+    description: item.description,
+    quantity: item.quantity,
+    unit_price: item.unitPrice,
+    amount: roundMoney(item.quantity * item.unitPrice),
+    is_taxable: item.isTaxable,
+    tax_rate: item.taxRate,
+  }));
+}
+
+export async function createEstimateAction(formData: FormData) {
+  const items = parseEstimateItems(formData);
+
+  if (items.length === 0) {
+    throw new Error("Estimate 항목을 하나 이상 입력해 주세요.");
+  }
+
+  const payload = estimatePayload(formData, items);
+
+  if (!payload.client_id) {
+    throw new Error("고객을 선택해 주세요.");
+  }
+
+  const { supabase } = await getAuthedSupabase("/estimates");
+  let estimateNumber = text(formData, "estimate_number");
+
+  if (!estimateNumber) {
+    const { data: existing } = await supabase
+      .from("estimates")
+      .select("estimate_number")
+      .like("estimate_number", `EST-${payload.issue_date.slice(0, 4)}-%`);
+
+    estimateNumber = buildNextEstimateNumber(
+      (existing ?? []).map((row) => String(row.estimate_number)),
+      payload.issue_date,
+    );
+  }
+
+  const { data, error: estimateError } = await supabase
+    .from("estimates")
+    .insert({ ...payload, estimate_number: estimateNumber })
+    .select("id")
+    .single();
+
+  if (estimateError || !data?.id) {
+    throw new Error(
+      `Estimate 저장 실패: ${estimateError?.message ?? "알 수 없는 오류"}`,
+    );
+  }
+
+  const { error: itemError } = await supabase
+    .from("estimate_items")
+    .insert(estimateItemRows(data.id, items));
+
+  if (itemError) {
+    await supabase.from("estimates").delete().eq("id", data.id);
+    throw new Error(`Estimate 항목 저장 실패: ${itemError.message}`);
+  }
+
+  revalidatePath("/estimates");
+}
+
+export async function updateEstimateAction(formData: FormData) {
+  const estimateId = text(formData, "estimate_id");
+
+  if (!estimateId) {
+    return;
+  }
+
+  const items = parseEstimateItems(formData);
+
+  if (items.length === 0) {
+    throw new Error("Estimate 항목을 하나 이상 입력해 주세요.");
+  }
+
+  const payload = estimatePayload(formData, items);
+  const estimateNumber = text(formData, "estimate_number");
+  const { supabase } = await getAuthedSupabase("/estimates");
+  const { error: estimateError } = await supabase
+    .from("estimates")
+    .update({
+      ...payload,
+      ...(estimateNumber ? { estimate_number: estimateNumber } : {}),
+    })
+    .eq("id", estimateId);
+
+  if (estimateError) {
+    throw new Error(`Estimate 수정 실패: ${estimateError.message}`);
+  }
+
+  const { error: deleteItemsError } = await supabase
+    .from("estimate_items")
+    .delete()
+    .eq("estimate_id", estimateId);
+
+  if (deleteItemsError) {
+    throw new Error(`Estimate 항목 삭제 실패: ${deleteItemsError.message}`);
+  }
+
+  const { error: insertItemsError } = await supabase
+    .from("estimate_items")
+    .insert(estimateItemRows(estimateId, items));
+
+  if (insertItemsError) {
+    throw new Error(`Estimate 항목 수정 실패: ${insertItemsError.message}`);
+  }
+
+  revalidatePath("/estimates");
+}
+
+export async function deleteEstimateAction(formData: FormData) {
+  const estimateId = text(formData, "estimate_id");
+
+  if (!estimateId) {
+    return;
+  }
+
+  const { supabase } = await getAuthedSupabase("/estimates");
+  const { error } = await supabase.from("estimates").delete().eq("id", estimateId);
+
+  if (error) {
+    throw new Error(`Estimate 삭제 실패: ${error.message}`);
+  }
+
+  revalidatePath("/estimates");
 }
 
 export async function createBankAccountAction(formData: FormData) {
