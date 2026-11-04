@@ -20,6 +20,18 @@ export type EstimateDocumentLine = {
 export const ESTIMATE_NUMBER_PREFIX = "EST";
 export const ESTIMATE_VALID_DAYS = 30;
 
+/**
+ * Browsers submit textarea line breaks as CRLF. The PDF font has no glyph for
+ * a bare carriage return, so it renders as a box at the end of each line.
+ */
+export function normalizeLineBreaks(value: string): string {
+  return value.replace(/\r\n?/g, "\n");
+}
+
+export function getEstimateNotes(estimate: Pick<EstimateRow, "notes">): string {
+  return normalizeLineBreaks(estimate.notes ?? "").trim();
+}
+
 export function getEstimateRecipient(estimate: EstimateDocument) {
   const companyName = estimate.clients?.company_name ?? "";
   const contactName = estimate.clients?.name ?? "";
@@ -38,7 +50,7 @@ export function buildEstimateLineItems(
   return [...estimate.estimate_items]
     .sort((a, b) => toNumber(a.position) - toNumber(b.position))
     .map((item) => ({
-      description: item.description,
+      description: normalizeLineBreaks(item.description),
       quantity: toNumber(item.quantity),
       unitPrice: toNumber(item.unit_price),
       amount: toNumber(item.amount),

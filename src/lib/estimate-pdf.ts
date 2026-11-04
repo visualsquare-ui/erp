@@ -6,6 +6,7 @@ import { toNumber } from "./erp-calculations";
 import {
   buildEstimateLineItems,
   formatQuantity,
+  getEstimateNotes,
   getEstimateRecipient,
   type EstimateDocument,
 } from "./estimate-document";
@@ -254,7 +255,7 @@ export async function buildEstimatePdf(estimate: EstimateDocument) {
       });
 
     // Notes
-    const notes = (estimate.notes ?? "").trim();
+    const notes = getEstimateNotes(estimate);
     if (notes) {
       doc.fontSize(8);
       const notesHeight = doc.heightOfString(notes, {

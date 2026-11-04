@@ -18,6 +18,7 @@ import {
   buildEstimateLineItems,
   formatQuantity,
   getDefaultEstimateValidUntil,
+  getEstimateNotes,
   getEstimateRecipient,
 } from "@/lib/estimate-document";
 import { formatCurrency, formatUsDate } from "@/lib/format";
@@ -663,7 +664,7 @@ function EstimatePreviewModal({
   const lineItems = buildEstimateLineItems(estimate);
   const alreadySent = Boolean(estimate.sent_at) || estimate.status !== "draft";
   const canSend = Boolean(recipient.email);
-  const notes = (estimate.notes ?? "").trim();
+  const notes = getEstimateNotes(estimate);
 
   async function sendEstimate() {
     const confirmed = window.confirm(

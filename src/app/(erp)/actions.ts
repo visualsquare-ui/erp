@@ -22,6 +22,7 @@ import {
 import {
   buildNextEstimateNumber,
   getDefaultEstimateValidUntil,
+  normalizeLineBreaks,
 } from "@/lib/estimate-document";
 import { addPaymentTermDays, type PaymentTerms } from "@/lib/format";
 import { optionalFormText } from "@/lib/form-values";
@@ -1272,7 +1273,10 @@ function estimatePayload(formData: FormData, items: EstimateItemInput[]) {
     subtotal: draft.subtotal,
     tax: draft.tax,
     total: draft.total,
-    notes: text(formData, "notes"),
+    notes: (() => {
+      const notes = text(formData, "notes");
+      return notes ? normalizeLineBreaks(notes) : null;
+    })(),
   };
 }
 

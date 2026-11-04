@@ -7,7 +7,9 @@ import {
   buildNextEstimateNumber,
   formatQuantity,
   getDefaultEstimateValidUntil,
+  getEstimateNotes,
   getEstimateRecipient,
+  normalizeLineBreaks,
   type EstimateDocument,
 } from "./estimate-document";
 import { buildEstimatePdf } from "./estimate-pdf";
@@ -136,6 +138,25 @@ describe("estimate document", () => {
 
     expect(text).toContain("Total: $2,600.00");
     expect(text).not.toMatch(/[—;]/);
+  });
+
+  it("turns textarea CRLF line breaks into plain line breaks", () => {
+    expect(normalizeLineBreaks("A.\r\nB.\rC.\nD.")).toBe("A.\nB.\nC.\nD.");
+    expect(
+      getEstimateNotes({ notes: "  Installation is not included.\r\nStands are not included.\r\n" }),
+    ).toBe("Installation is not included.\nStands are not included.");
+    expect(getEstimateNotes({ notes: null })).toBe("");
+  });
+
+  it("removes carriage returns from line item descriptions", () => {
+    const lines = buildEstimateLineItems({
+      ...estimate,
+      estimate_items: [
+        { ...estimate.estimate_items[0], description: "Line one\r\nLine two" },
+      ],
+    });
+
+    expect(lines[0].description).toBe("Line one\nLine two");
   });
 
   it("renders a pdf", async () => {
